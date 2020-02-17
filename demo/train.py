@@ -17,13 +17,13 @@ from generate import *
 argparser = argparse.ArgumentParser()
 argparser.add_argument('filename', type=str, default="../data/demoData/andes_peru.txt")
 argparser.add_argument('--model', type=str, default="gru")
-argparser.add_argument('--n_epochs', type=int, default=2000)
-argparser.add_argument('--print_every', type=int, default=100)
+argparser.add_argument('--n_epochs', type=int, default=8000)
+argparser.add_argument('--print_every', type=int, default=500)
 argparser.add_argument('--hidden_size', type=int, default=100)
 argparser.add_argument('--n_layers', type=int, default=5)
 argparser.add_argument('--learning_rate', type=float, default=0.01)
-argparser.add_argument('--chunk_len', type=int, default=9)
-argparser.add_argument('--batch_size', type=int, default=100)
+argparser.add_argument('--chunk_len', type=int, default=8)
+argparser.add_argument('--batch_size', type=int, default=200)
 argparser.add_argument('--shuffle', action='store_true')
 argparser.add_argument('--cuda', action='store_true')
 args = argparser.parse_args()
@@ -34,10 +34,10 @@ if args.cuda:
 allSeq, allSeqLen= read_file(args.filename)
 
 def random_training_set(chunk_len, batch_size):
-    inp = torch.LongTensor(batch_size, chunk_len)
-    target = torch.LongTensor(batch_size, chunk_len)
+    inp = torch.FloatTensor(batch_size, chunk_len, 2)
+    target = torch.FloatTensor(batch_size, chunk_len, 2)
     for bi in range(batch_size):
-        index = random.randint(0, allSeqLen)
+        index = random.randint(0, allSeqLen-1000)
         chunk = allSeq[index]
         inp[bi] = loc_tensor(chunk[:-1])
         target[bi] = loc_tensor(chunk[1:])
@@ -79,7 +79,7 @@ decoder = DemoRNN(
     n_layers=args.n_layers,
 )
 decoder_optimizer = torch.optim.Adam(decoder.parameters(), lr=args.learning_rate)
-criterion = nn.CrossEntropyLoss()
+criterion = nn.MSELoss() #nn.CrossEntropyLoss()
 
 if args.cuda:
     decoder.cuda()
@@ -95,8 +95,8 @@ try:
         loss_avg += loss
 
         if epoch % args.print_every == 0:
-            print('[%s (%d %d%%) %.4f]' % (time_since(start), epoch, epoch / args.n_epochs * 100, loss))
-            # print(generate(decoder, 'Wh', 100, cuda=args.cuda), '\n')
+            print('[%s (%d %d%%) %.4f]' % (time_since(start), epoch, epoch / args.n_epochs * 100, loss*10000))
+            drawResult(str(epoch), generate(decoder, 20, cuda=args.cuda))
 
     print("Saving...")
     save()

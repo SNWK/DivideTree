@@ -1,6 +1,5 @@
 # https://github.com/spro/char-rnn.pytorch
 
-import unidecode
 import string
 import random
 import time
@@ -13,10 +12,10 @@ import torch
 def read_file(filename):
     file_in = open(filename, 'r')
     allSeq = []
-    for line in file_in.readlines:
+    for line in file_in.readlines():
         tmp = []
         for s in line.split():
-            tmp.append(s.split(','))
+            tmp.append([float(c) for c in s.split(',')])
         allSeq.append(tmp)
     return allSeq, len(allSeq)
 

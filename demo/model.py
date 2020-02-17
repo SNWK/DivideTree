@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 class DemoRNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, model="gru", n_layers=1):
+    def __init__(self, input_size, hidden_size, output_size, model="lstm", n_layers=1):
         super(DemoRNN, self).__init__()
         self.model = model.lower()
         self.input_size = input_size
@@ -24,7 +24,8 @@ class DemoRNN(nn.Module):
     def forward(self, input, hidden):
         batch_size = input.size(0)
         encoded = self.encoder(input)
-        output, hidden = self.rnn(encoded.view(1, batch_size, -1), hidden) # the size -1 is inferred from other dimensions
+        output, hidden = self.rnn(encoded.view(1, batch_size, -1), hidden) 
+        # the size -1 is inferred from other dimensions
         output = self.decoder(output.view(batch_size, -1))
         return output, hidden
 
