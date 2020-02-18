@@ -46,7 +46,8 @@ def pre2():
         peaks['longitude'] =  (peaks['longitude'] - peaks['longitude'].min()) / (peaks['longitude'].max() - peaks['longitude'].min())
         
         fdata_in = open(os.path.join(demoDatasetDir, region.replace('.shp', 'pre20.txt')), 'r')
-
+#         fdata_in = open('data/demoData/demotest.txt', 'r')
+        
         allSeqs = []
         for line in fdata_in.readlines():
             seq = line.split()
@@ -66,7 +67,8 @@ def pre2():
                 nseq.append((lon2-lon1, lat2-lat1))
             new_allSeqs.append(nseq)
 
-        fout = open(os.path.join(demoDatasetDir, region.replace('.shp', '20.txt')), 'w') 
+        fout = open(os.path.join(demoDatasetDir, region.replace('.shp', '20.txt')), 'w')
+#         fout = open('data/demoData/demotest1.txt', 'w')
         for s in new_allSeqs:
             fout.write(" ".join([",".join([str(l) for l in v]) for v in s]))
             fout.write('\n')
@@ -75,5 +77,5 @@ def pre2():
         print('%s: %3d samples, %d s'%(region, len(new_allSeqs), time.time() - st)) 
     print('done!')
 
-pre1()
+# pre1()
 pre2()

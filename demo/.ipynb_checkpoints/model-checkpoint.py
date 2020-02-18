@@ -13,12 +13,13 @@ class DemoRNN(nn.Module):
         self.output_size = output_size
         self.n_layers = n_layers
 
-        # self.encoder = nn.Embedding(input_size, hidden_size)
+#         self.encoderl1 = nn.Linear(input_size, hidden_size)
         self.encoder = nn.Linear(input_size, hidden_size) # fc input layer [1,2] -> [1, n]
         if self.model == "gru":
             self.rnn = nn.GRU(hidden_size, hidden_size, n_layers)
         elif self.model == "lstm":
             self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
+#         self.decoderl1 = nn.Linear(hidden_size, hidden_size)
         self.decoder = nn.Linear(hidden_size, output_size) # fc output  layer  -> [1, n]
 
     def forward(self, input, hidden):

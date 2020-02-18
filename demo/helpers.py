@@ -1,5 +1,3 @@
-# https://github.com/spro/char-rnn.pytorch
-
 import string
 import random
 import time

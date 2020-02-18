@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# https://github.com/spro/char-rnn.pytorch
 
 import torch
 import os
@@ -8,6 +7,43 @@ import argparse
 from helpers import *
 from model import *
 import matplotlib.pyplot as plt
+def generateTree(decoder, predict_len=20, cuda=False):
+    
+    directions = [[[0, -0.003], [0, -0.003], [0, -0.003], [0, -0.003],[0, -0.003]], 
+                  [[-0.003, 0.003],[-0.003, 0.003],[-0.003, 0.003],[-0.003, 0.003],[-0.003, 0.003]], 
+                  [[0.003, 0.003],[0.003, 0.003], [0.003, 0.003], [0.003, 0.003] ,[0.003, 0.003]]]
+    tree = []
+    for i in range(len(directions)):
+        ini_points = [[0,0]]
+        ini_points += directions[i]
+        hidden = decoder.init_hidden(1)
+        prime_input = Variable(loc_tensor(ini_points).unsqueeze(0))
+        if cuda:
+            hidden = hidden.cuda()
+            prime_input = prime_input.cuda()
+        predicted = [[0,0]]
+
+        # Use priming string to "build up" hidden state
+        for p in range(len(ini_points) - 1):
+            if p != 0:
+                predicted.append([predicted[-1][0] + ini_points[p][0], predicted[-1][1] + ini_points[p][1]])
+            _, hidden = decoder(prime_input[:,p], hidden)
+
+        inp = prime_input[:,-1]
+
+        for p in range(predict_len):
+            output, hidden = decoder(inp, hidden)
+
+            dis_change = output.tolist()[0]
+            # print(p, dis_change)
+            # Add predicted character to string and use as next input
+            predicted_loc = [predicted[-1][0] + dis_change[0], predicted[-1][1] + dis_change[1]]
+            predicted.append(predicted_loc)
+            inp = Variable(loc_tensor([dis_change]))
+            if cuda:
+                inp = inp.cuda()
+        tree.append(predicted)
+    return tree
 
 def generate(decoder, predict_len=20, cuda=False):
     ini_points = [[0,0]]
@@ -60,7 +96,7 @@ if __name__ == '__main__':
 # Parse command line arguments
     argparser = argparse.ArgumentParser()
     argparser.add_argument('filename', type=str)
-    argparser.add_argument('-l', '--predict_len', type=int, default=100)
+    argparser.add_argument('-l', '--predict_len', type=int, default=10)
     argparser.add_argument('--cuda', action='store_true')
     args = argparser.parse_args()
 
