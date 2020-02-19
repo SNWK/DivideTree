@@ -20,8 +20,8 @@ argparser.add_argument('--model', type=str, default="gru")
 argparser.add_argument('--n_epochs', type=int, default=4000)
 argparser.add_argument('--print_every', type=int, default=500)
 argparser.add_argument('--hidden_size', type=int, default=256)
-argparser.add_argument('--n_layers', type=int, default=5)
-argparser.add_argument('--learning_rate', type=float, default=0.0001)
+argparser.add_argument('--n_layers', type=int, default=6)
+argparser.add_argument('--learning_rate', type=float, default=0.001)
 argparser.add_argument('--chunk_len', type=int, default=8)
 argparser.add_argument('--batch_size', type=int, default=1000)
 argparser.add_argument('--shuffle', action='store_true')
@@ -40,7 +40,7 @@ def random_training_set(chunk_len, batch_size):
         index = random.randint(0, allSeqLen-1000)
         chunk = allSeq[index]
         inp[bi] = loc_tensor(chunk[:-1])
-        target[bi] = loc_tensor(chunk[1:])
+        target[bi] = change2onehot(chunk[1:])
     inp = Variable(inp)
     target = Variable(target)
     if args.cuda:
@@ -74,12 +74,12 @@ def save():
 decoder = DemoRNN(
     2, # input size
     args.hidden_size,
-    2, # output size
+    1000, # output size
     model=args.model,
     n_layers=args.n_layers,
 )
 decoder_optimizer = torch.optim.Adam(decoder.parameters(), lr=args.learning_rate)
-criterion = nn.MSELoss() #nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss() #  nn.MSELoss() 
 
 if args.cuda:
     decoder.cuda()

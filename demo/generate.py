@@ -7,7 +7,7 @@ import argparse
 from helpers import *
 from model import *
 import matplotlib.pyplot as plt
-def generateTree(decoder, predict_len=20, cuda=False):
+def generateTree(decoder, predict_len=20, cuda=False, temperature=0.8):
     
     directions = [[[0, -0.003], [0, -0.003], [0, -0.003], [0, -0.003],[0, -0.003]], 
                   [[-0.003, 0.003],[-0.003, 0.003],[-0.003, 0.003],[-0.003, 0.003],[-0.003, 0.003]], 
@@ -34,7 +34,12 @@ def generateTree(decoder, predict_len=20, cuda=False):
         for p in range(predict_len):
             output, hidden = decoder(inp, hidden)
 
-            dis_change = output.tolist()[0]
+            # dis_change = output.tolist()[0]
+            output_dist = output.data.view(-1).div(temperature).exp()
+            top_i = torch.multinomial(output_dist, 1)[0]
+            dis_change_idx = output.tolist()[0]
+            dis_change = index2change(dis_change_idx)
+
             # print(p, dis_change)
             # Add predicted character to string and use as next input
             predicted_loc = [predicted[-1][0] + dis_change[0], predicted[-1][1] + dis_change[1]]
@@ -45,7 +50,7 @@ def generateTree(decoder, predict_len=20, cuda=False):
         tree.append(predicted)
     return tree
 
-def generate(decoder, predict_len=20, cuda=False):
+def generate(decoder, predict_len=20, cuda=False, temperature = 0.8):
     ini_points = [[0,0]]
     hidden = decoder.init_hidden(1)
     prime_input = Variable(loc_tensor(ini_points).unsqueeze(0))
@@ -63,8 +68,12 @@ def generate(decoder, predict_len=20, cuda=False):
     
     for p in range(predict_len):
         output, hidden = decoder(inp, hidden)
-        
-        dis_change = output.tolist()[0]
+
+        output_dist = output.data.view(-1).div(temperature).exp()
+        top_i = torch.multinomial(output_dist, 1)[0]
+        dis_change_idx = output.tolist()[0]
+        dis_change = index2change(dis_change_idx)
+
         # print(p, dis_change)
         # Add predicted character to string and use as next input
         predicted_loc = [predicted[-1][0] + dis_change[0], predicted[-1][1] + dis_change[1]]
