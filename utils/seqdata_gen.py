@@ -17,6 +17,7 @@ def dfs(tree, seq, node):
             result += dfs(tree, p, childs[0])
     return result
 
+
 def drawSeq(peaks, paths):
     peaks['latitude'] =  (peaks['latitude'] - peaks['latitude'].min()) / (peaks['latitude'].max() - peaks['latitude'].min())
     peaks['longitude'] =  (peaks['longitude'] - peaks['longitude'].min()) / (peaks['longitude'].max() - peaks['longitude'].min())
@@ -63,7 +64,9 @@ def drawTree(peaks, paths):
     plt.ylabel('All Seqs')
     plt.show()
 
+
 def genSeq(peaks):
+    # For demo
     vertices = peaks.index
     gsample = Graph()
     pairs = set()
@@ -96,14 +99,28 @@ def genSeq(peaks):
     allSeq = dfs(tree, [], root)
     return allSeq
 
-def test():
-    tree = {}
-    tree[1] = [(2,1), (3,1)]
-    tree[2] = [(4,1), (5,1), (1,1)]
-    tree[3] = [(6,1), (1,1)]
-    tree[4] = [(2,1)]
-    tree[5] = [(2,1)]
-    tree[6] = [(3,1)]
-    root = 1
-    s = dfs(tree, [], root)
-    print(s)
+
+
+def dfsSeqTree(rootNode, result):
+    leftp = [0, 0, 0, 0, 0]
+    rightp = [2, 0, 0, 0, 0]
+    result.append(rootNode.getVec())
+    if rootNode.children == []:
+        return result
+    result.append(leftp)
+    for c in rootNode.children:
+        result = dfsSeqTree(c, result)
+    result.append(rightp)
+    return result
+
+
+def genFullSeq(rootNode, isDFS=True):
+    leftp = [0, 0, 0, 0, 0]
+    rightp = [2, 0, 0, 0, 0]
+    result = []
+    if isDFS:
+        result = []
+        result.append(leftp)
+        result = dfsSeqTree(rootNode, result)
+        result.append(rightp)
+    return result

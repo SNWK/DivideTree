@@ -1,3 +1,5 @@
+import math
+
 class Graph:
     def __init__(self):
         self.edges = []
@@ -45,6 +47,22 @@ class UnionFind:
             a = self.components[a]
         return a
 
+class Treenode:
+    def __init__(self, idx, x, y, ele, pro, par):
+        self.idx= idx
+        self.x = x
+        self.y = y
+        self.ele = ele
+        self.pro = pro
+        self.parent = par
+        self.children = []
+    
+    def getVec(self):
+        if self.parent == None:
+            return (1,0,0,0,0)
+        else:
+            return (self.x - self.parent.x, self.y - self.parent.y, self.ele - self.parent.ele, self.pro - self.parent.pro)
+
 def byWeight(edge):
     return edge[2]
 
@@ -61,4 +79,75 @@ def minimum_spanning_tree(tree):
         if not uf.connected(v, w):
             result.append(minor_edge)
             uf.connect(v, w)
+    # return all connected edges
     return result
+
+def buildTree(edges):
+    return
+
+def getTreeNodeByIdx(root, index):
+    if root.idx == index:
+        return root
+    queue = []
+    queue.append(root)
+    while queue:
+        node = queue.pop()
+        for i in node.children:
+            if i.idx == index:
+                return i
+            else:
+                queue.append(i)
+    print("Error: not found", index)
+
+
+def genDivideTree(peaks):
+    # for RNN
+    vertices = peaks.index
+    gsample = Graph()
+    pairs = set()
+    for v in vertices:
+        for w in vertices:
+            if v != w and (v, w) not in pairs and (w, v) not in pairs:
+                pairs.add((v, w))
+                lat1 = peaks['latitude'].loc[v]
+                lon1 = peaks['longitude'].loc[v]
+                lat2 = peaks['latitude'].loc[w]
+                lon2 = peaks['longitude'].loc[w]
+                dist = math.sqrt(pow(lat1 - lat2, 2) + pow(lon1 - lon2, 2))
+                gsample.add_edge(v, w, dist)
+    treesample = minimum_spanning_tree(gsample)
+
+    # For test, draw the tree
+    # drawTree(peaks, treesample)
+    
+    rootidx = peaks['elevation in feet'].idxmax()
+    rootNode = Treenode(rootidx, peaks['longitude'].loc[rootidx], 
+                        peaks['latitude'].loc[rootidx], peaks['elevation in feet'].loc[rootidx], 
+                        peaks['prominence in feet'].loc[rootidx], None)
+    
+    edges = {}
+    for edge in treesample:
+        v, w, _ = edge
+        if v not in edges.keys():
+            edges[v] = []
+        if w not in edges.keys():
+            edges[w] = []
+        edges[v].append(w)
+        edges[w].append(v)
+    
+    queue = []
+    queue.append(rootidx)
+    while queue:
+        nodeidx = queue.pop()
+        node = getTreeNodeByIdx(rootNode, nodeidx)
+        # print("parent",node.idx)
+        for childrenidx in edges[nodeidx]:
+            # print("parent",node.idx, "child", childrenidx)
+            childnode = Treenode(childrenidx, peaks['longitude'].loc[childrenidx], 
+                        peaks['latitude'].loc[childrenidx], peaks['elevation in feet'].loc[childrenidx], 
+                        peaks['prominence in feet'].loc[childrenidx], node)
+            node.children.append(childnode)
+            edges[childrenidx].remove(nodeidx)
+            queue.append(childrenidx)
+
+    return rootNode

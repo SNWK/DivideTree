@@ -16,14 +16,14 @@ from generate import *
 # Parse command line arguments
 argparser = argparse.ArgumentParser()
 argparser.add_argument('filename', type=str, default="../data/demoData/andes_peru.txt")
-argparser.add_argument('--model', type=str, default="gru")
-argparser.add_argument('--n_epochs', type=int, default=4000)
+argparser.add_argument('--model', type=str, default="lstm")
+argparser.add_argument('--n_epochs', type=int, default=3000)
 argparser.add_argument('--print_every', type=int, default=500)
-argparser.add_argument('--hidden_size', type=int, default=256)
-argparser.add_argument('--n_layers', type=int, default=6)
-argparser.add_argument('--learning_rate', type=float, default=0.001)
+argparser.add_argument('--hidden_size', type=int, default=1024)
+argparser.add_argument('--n_layers', type=int, default=5)
+argparser.add_argument('--learning_rate', type=float, default=0.1)
 argparser.add_argument('--chunk_len', type=int, default=8)
-argparser.add_argument('--batch_size', type=int, default=1000)
+argparser.add_argument('--batch_size', type=int, default=500)
 argparser.add_argument('--shuffle', action='store_true')
 argparser.add_argument('--cuda', action='store_true')
 args = argparser.parse_args()
@@ -35,7 +35,7 @@ allSeq, allSeqLen= read_file(args.filename)
 
 def random_training_set(chunk_len, batch_size):
     inp = torch.FloatTensor(batch_size, chunk_len, 2)
-    target = torch.FloatTensor(batch_size, chunk_len, 2)
+    target = torch.LongTensor(batch_size, chunk_len, 1)
     for bi in range(batch_size):
         index = random.randint(0, allSeqLen-1000)
         chunk = allSeq[index]
@@ -57,7 +57,9 @@ def train(inp, target):
 
     for c in range(args.chunk_len):
         output, hidden = decoder(inp[:,c], hidden)
-        loss += criterion(output.view(args.batch_size, -1), target[:,c])
+#         print(output.view(args.batch_size, -1).size())
+#         print(target[:,c].size())
+        loss += criterion(output.view(args.batch_size, -1), target[:,c].squeeze())
 
     loss.backward()
     decoder_optimizer.step()
@@ -74,7 +76,7 @@ def save():
 decoder = DemoRNN(
     2, # input size
     args.hidden_size,
-    1000, # output size
+    100, # output size
     model=args.model,
     n_layers=args.n_layers,
 )
@@ -95,8 +97,8 @@ try:
         loss_avg += loss
 
         if epoch % args.print_every == 0:
-            print('[%s (%d %d%%) %.4f]' % (time_since(start), epoch, epoch / args.n_epochs * 100, loss*10000))
-            drawResult(str(epoch), generate(decoder, 20, cuda=args.cuda))
+            print('[%s (%d %d%%) %.4f]' % (time_since(start), epoch, epoch / args.n_epochs * 100, loss))
+            drawResult(str(epoch), generate(decoder, 10, cuda=args.cuda))
 
     print("Saving...")
     save()

@@ -4,33 +4,32 @@ import time
 import math
 import torch
 
-onehotLength = 10000
+onehotLength = 100
 leftb = -0.01
 rightb = 0.01
 blockLength = (rightb-leftb) / math.sqrt(onehotLength)
 
-def change2onehot(change):
+def change2onehot(changelist):
     l = []
-    for i in change:
+    for change in changelist:
         v, w = change
         if v < leftb: v = leftb
         if w < leftb: w = leftb
         if v > rightb: v = rightb
         if v > rightb: v = rightb
-        vn = int( (v - leftb) / blockLength )
-        wn = int( (w - leftb) / blockLength )
-        t = [0 for z in range(onehotLength)]
-        t[ math.sqrt(onehotLength)*vn + wn ] = 1
-        l.append(t)
-    tensor = torch.IntTensor(l)
+        vn = min(int( (v - leftb) / blockLength ), math.sqrt(onehotLength)-1)
+        wn = min(int( (w - leftb) / blockLength ), math.sqrt(onehotLength)-1)
+        l.append([int(math.sqrt(onehotLength)*vn) + wn])
+    tensor = torch.LongTensor(l)
     return tensor
 
 def index2change(idx):
     # idx in onehot
+    amfi = 1
     vn = int(idx / math.sqrt(onehotLength))
     wn = idx%math.sqrt(onehotLength)
-    v = random.random( leftb + vn*blockLength, leftb + (vn+1)*blockLength)
-    w = random.random( leftb + wn*blockLength, leftb + (wn+1)*blockLength)
+    v = random.uniform( leftb + vn*blockLength*amfi, leftb + (vn+1)*blockLength*amfi)
+    w = random.uniform( leftb + wn*blockLength*amfi, leftb + (wn+1)*blockLength*amfi)
     return [v, w]
 
 

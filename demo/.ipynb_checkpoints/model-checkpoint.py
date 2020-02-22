@@ -19,13 +19,15 @@ class DemoRNN(nn.Module):
             self.rnn = nn.GRU(hidden_size, hidden_size, n_layers)
         elif self.model == "lstm":
             self.rnn = nn.LSTM(hidden_size, hidden_size, n_layers)
+        self.rnn.flatten_parameters()
 #         self.decoderl1 = nn.Linear(hidden_size, hidden_size)
         self.decoder = nn.Linear(hidden_size, output_size) # fc output  layer  -> [1, n]
 
     def forward(self, input, hidden):
+#         self.rnn.flatten_parameters()
         batch_size = input.size(0)
         encoded = self.encoder(input)
-        output, hidden = self.rnn(encoded.view(1, batch_size, -1), hidden) 
+        output, hidden = self.rnn(encoded.view(1, batch_size, -1), hidden)
         # the size -1 is inferred from other dimensions
         output = self.decoder(output.view(batch_size, -1))
         return output, hidden
