@@ -1,5 +1,14 @@
 # DivideTree
 
+## MCMC model
+
+## MCMC model
+
+MCMC/MCMC.ipynb: includes analysis, mcmc procedure, generate and eveluation
+
+Using Pymc3 library
+
+
 ## RNN model
 
 RNN/train.py: model initialization and training process
