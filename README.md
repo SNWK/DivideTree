@@ -2,7 +2,6 @@
 
 ## MCMC model
 
-## MCMC model
 
 MCMC/MCMC.ipynb: includes analysis, mcmc procedure, generate and eveluation
 
