@@ -20,7 +20,7 @@ RNN/helpers.py: includes some processing methods
 
 Train:
 ```
-python train.py ../data/regionTreeSeqs/andes_peru.txt --cuda
+python train.py ../data/regionTreeSeqs/andes_perulittle.txt --model lstm --n_epochs 10000 --print_every 1000 --hidden_size 256 --n_layers 2 --learning_rate 0.01 --chunk_len 9 --batch_size 50 --cuda
 ```
 
 Generate:
