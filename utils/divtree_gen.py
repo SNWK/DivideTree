@@ -59,11 +59,11 @@ class Treenode:
     
     def getVec(self):
         if self.parent == None:
-            return (1,0,0,0,0)
+            return (0,0,0,0,0)
         else:
             dist = math.sqrt(pow(self.x - self.parent.x, 2) + pow(self.y - self.parent.y, 2))
             arc = math.atan((self.y - self.parent.y)/(self.x - self.parent.x)) / 2*math.pi
-            return (1, self.x - self.parent.x, self.y - self.parent.y, self.ele - self.parent.ele, self.pro - self.parent.pro)
+            return (0, self.x - self.parent.x, self.y - self.parent.y, self.ele - self.parent.ele, self.pro - self.parent.pro)
 
 def byWeight(edge):
     return edge[2]

@@ -102,8 +102,8 @@ def genSeq(peaks):
 
 
 def dfsSeqTree(rootNode, result):
-    leftp = [0, 0, 0, 0, 0]
-    rightp = [2, 0, 0, 0, 0]
+    leftp = [-1, 0, 0, 0, 0]
+    rightp = [1, 0, 0, 0, 0]
     result.append(rootNode.getVec())
     if rootNode.children == []:
         return result
@@ -115,8 +115,8 @@ def dfsSeqTree(rootNode, result):
 
 
 def genFullSeq(rootNode, isDFS=True):
-    leftp = [0, 0, 0, 0, 0]
-    rightp = [2, 0, 0, 0, 0]
+    leftp = [-1, 0, 0, 0, 0]
+    rightp = [1, 0, 0, 0, 0]
     result = []
     if isDFS:
         result = []
@@ -126,12 +126,12 @@ def genFullSeq(rootNode, isDFS=True):
     return result
 
 def dfsSeqTreeMCMC(rootNode, result):
-    leftp = [0, 0, 0, 0, 0]
-    rightp = [2, 0, 0, 0, 0]
+    leftp = [-1, 0, 0, 0, 0]
+    rightp = [1, 0, 0, 0, 0]
     if rootNode.parent != None:
         result.append([rootNode.parent.getVec(),rootNode.getVec()])
     else:
-        result.append([(1, 0, 0, 0, 0), rootNode.getVec()])
+        result.append([(0, 0, 0, 0, 0), rootNode.getVec()])
 
     if rootNode.children == []:
         return result

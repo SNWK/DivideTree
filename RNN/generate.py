@@ -1,25 +1,25 @@
 #!/usr/bin/env python
+import sys
+sys.path.append("..") 
 
 import torch
 import os
 import argparse
 import copy
 import numpy as np
-
-from helpers import *
-from model import *
+from RNN.helpers import *
+from RNN.model import *
 import matplotlib.pyplot as plt
-import sys
-sys.path.append("..") 
 from utils.divtree_gen import *
+import random
 
-predict_len=25
+predict_len=20
 temperature=0.8
 maxprelen = 8
 # threshould = 0.18
 
 def generateTree(sequence):
-    i = 0
+    i = -1
     root = Treenode(i, 0, 0, 0, 0, None)
     queue = []
     node = root
@@ -28,62 +28,86 @@ def generateTree(sequence):
     for seq in sequence:
         tag, rou, arc, ele, pro = seq
         # node
-        if tag >= 0.5 and tag <= 1.5:
+        if tag >= -0.5 and tag <= 0.5:
             i += 1
             t_node = Treenode(i, node.x + rou*math.cos(arc), node.y + rou*math.sin(arc), node.ele + ele, node.pro + pro, node)
             lastnode = t_node
             node.children.append(t_node)
         # leftp
-        elif tag < 0.5:
+        elif tag < -0.5:
             queue.append(node)
             node = lastnode
         # rightp
-        elif tag > 1.5:
+        elif tag > 0.5:
             node = queue.pop()
     
     return root
 
-def generate(decoder, predict_len=20, cuda=False):
-    datamean, datastd = getMeanStd('../data/regionTreeSeqs/andes_peru.txt')
-    ini_points = [[0,0,0,0,0], [1,0,0,0,0], [0,0,0,0,0]]
-    hidden = decoder.init_hidden(1)
-    prime_input = Variable(info_tensor(ini_points).unsqueeze(0))
+def generate(decoder, predict_len=20, cuda=False, filename='null'):
+    if filename == 'null':
+        filename = '../data/regionTreeSeqs/andes_perulittle.txt'
+    datamean, datastd = getMeanStd(filename)
 
-    if cuda:
-        # hidden = hidden.cuda():
-        hidden = (hidden[0].cuda(), hidden[1].cuda())
-        prime_input = prime_input.cuda()
+    inilen = 8
+    ex_file = open(filename, 'r')
+    ex_lines = ex_file.readlines()
+    ex_i = random.randint(0, len(ex_lines)-1)
+    ini_points = []
+    vsequence = []
+    for i, node in enumerate(ex_lines[ex_i].split(',')):
+        if i > inilen - 1:
+            break
+        node_data = [float(s) for s in node.split(';')]
+        ini_points.append(node_data)
+        if node_data[0] == -1:
+            vsequence.append('[')
+        elif node_data[0] == 0:
+            vsequence.append('Node')
+        else:
+            vsequence.append(']')
+
+    # print('initial seq is:\n', ini_points)
+    print('initial vseq is:', vsequence)
+
     predicted = ini_points
 
-    # Use priming string to "build up" hidden state
-    for p in range(len(ini_points) - 1):
-        _, hidden = decoder(prime_input[:,p], hidden)
-        
-    inp = prime_input[:,-1]
     
-    vsequence = ["[", "Node", "["]
     for p in range(predict_len):
-        output, hidden = decoder(inp, hidden)
+        hidden = decoder.init_hidden(1)
+        prime_input = Variable(info_tensor(ini_points[-inilen:]).unsqueeze(0))
 
+        if cuda:
+            # hidden = hidden.cuda():
+            hidden = (hidden[0].cuda(), hidden[1].cuda())
+            prime_input = prime_input.cuda()
+
+        # Use priming string to "build up" hidden state
+        for p in range(inilen-1):
+            _, hidden = decoder(prime_input[:,p], hidden)
+        # predict   
+        inp = prime_input[:,-1]
+        output, hidden = decoder(inp, hidden)
         output_list = output.data.view(-1).tolist()
-        tag, rou, arc, ele, pro = output_list
-        for i in range(1, len(output_list)):
-            output_list[i] = output_list[i]*datastd[i] + datamean[i]
+        output = output_list[2:]
+        tag = output_list[:3].index(max(output_list[:3]))
+        output[0] = tag
+        
+        ini_points.append(output)
+
+        for i in range(3, len(output_list)):
+            output[i-2] = output_list[i]*datastd[i-2] + datamean[i-2] #math.tan(output_list[i]*math.pi/2.0)
         # node
-        if tag >= 0.5 and tag <= 1.5:
+        if tag == 1:
             vsequence.append("Node")
         # leftp
-        elif tag < 0.5:
+        elif tag == 0:
             vsequence.append("[")
         # rightp
-        elif tag > 1.5:
+        elif tag == 2:
             vsequence.append("]")
+        predicted.append(output)
 
-        predicted.append(output_list)
-        inp = output
-        if cuda:
-            inp = inp.cuda()
-    print(predicted[8])
+    print(predicted[10])
     return vsequence, predicted
 
 def drawResult(name, path):
