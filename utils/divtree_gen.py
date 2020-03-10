@@ -1,5 +1,20 @@
 import math
 
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    """
+    lon1, lat1, lon2, lat2 = map(math.radians, [lon1, lat1, lon2, lat2])
+ 
+    # haversine
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    c = 2 * math.asin(math.sqrt(a)) 
+    r = 6371 
+    return c * r
+
 class Graph:
     def __init__(self):
         self.edges = []
@@ -61,7 +76,7 @@ class Treenode:
         if self.parent == None:
             return (0,0,0,0,0)
         else:
-            dist = math.sqrt(pow(self.x - self.parent.x, 2) + pow(self.y - self.parent.y, 2))
+            dist = haversine(self.parent.x, self.parent.y, self.x, self.y)
             arc = math.atan((self.y - self.parent.y)/(self.x - self.parent.x)) / 2*math.pi
             return (0, self.x - self.parent.x, self.y - self.parent.y, self.ele - self.parent.ele, self.pro - self.parent.pro)
 
@@ -115,7 +130,7 @@ def genDivideTree(peaks):
                 lon1 = peaks['longitude'].loc[v]
                 lat2 = peaks['latitude'].loc[w]
                 lon2 = peaks['longitude'].loc[w]
-                dist = math.sqrt(pow(lat1 - lat2, 2) + pow(lon1 - lon2, 2))
+                dist = haversine(lon1, lat1, lon2, lat2)
                 gsample.add_edge(v, w, dist)
     treesample = minimum_spanning_tree(gsample)
 
@@ -153,3 +168,24 @@ def genDivideTree(peaks):
             queue.append(childrenidx)
 
     return rootNode
+
+
+def getTreeHMC(peaks):
+    gsample = Graph()
+    pairs = set()
+    for v in range(len(peaks)):
+        for w in range(len(peaks)):
+            if v != w and (v, w) not in pairs and (w, v) not in pairs:
+                pairs.add((v, w))
+                lat1 = peaks[v][1]
+                lon1 = peaks[v][0]
+                lat2 = peaks[w][1]
+                lon2 = peaks[w][0]
+                dist = haversine(lon1, lat1, lon2, lat2)
+                gsample.add_edge(v, w, dist)
+    treesample = minimum_spanning_tree(gsample)
+    result = []
+    for r in treesample:
+        v, w, _ = r
+        result.append([peaks[v], peaks[w]])
+    return result

@@ -146,3 +146,33 @@ def genFullSeqMCMC(rootNode, isDFS=True):
         result = []
         result = dfsSeqTreeMCMC(rootNode, result)
     return result
+
+
+def dfsSeqTreeRNN(rootNode, result):
+    leftp = [-1, 0, 0, 0, 0]
+    rightp = [1, 0, 0, 0, 0]
+    if rootNode.parent != None:
+        vec = rootNode.parent.getVec()
+        for i in range(1, 5):
+            leftp[i] = vec[i]
+            rightp[i] = vec[i]
+    result.append(rootNode.getVec())
+    if rootNode.children == []:
+        return result
+    result.append(leftp)
+    for c in rootNode.children:
+        result = dfsSeqTreeRNN(c, result)
+    result.append(rightp)
+    return result
+
+
+def genFullSeqRNN(rootNode, isDFS=True):
+    leftp = [-1, 0, 0, 0, 0]
+    rightp = [1, 0, 0, 0, 0]
+    result = []
+    if isDFS:
+        result = []
+        result.append(leftp)
+        result = dfsSeqTreeRNN(rootNode, result)
+        result.append(rightp)
+    return result

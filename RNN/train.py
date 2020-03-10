@@ -168,9 +168,9 @@ if __name__ == "__main__":
             epochn = epoch
             loss = train(*random_training_set(args.chunk_len, args.batch_size), weight)
             loss_avg += loss
-            if epoch%500 == 0:
+            if epoch%2000 == 0:
                 # decoder_optimizer = torch.optim.Adam(decoder.parameters(), lr=args.learning_rate*0.1)
-                decoder_optimizer = torch.optim.SGD(decoder.parameters(), lr=args.learning_rate*0.01,  momentum=0.9)
+                decoder_optimizer = torch.optim.SGD(decoder.parameters(), lr=args.learning_rate*0.1,  momentum=0.9)
             if epoch % args.print_every == 0:
                 print('[%s (%d %d%%) %.4f]' % (time_since(start), epoch, epoch / args.n_epochs * 100, loss))
                 v, _ = generate(decoder, 20, cuda=args.cuda)
