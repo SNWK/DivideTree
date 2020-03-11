@@ -295,6 +295,10 @@ $$dx_B \sim N(\mu, \sigma) ​$$
 
   ![next_dx_prediction](note.assets/next_dx_prediction.png)
 
+  ![next_dy_prediction](note.assets/next_dy_prediction.png)
+
+  ![next_dele_prediction](note.assets/next_dele_prediction.png)
+
   ![next_dpro_prediction](note.assets/next_dpro_prediction.png)
 
 - 100 long Prediction:

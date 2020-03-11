@@ -79,6 +79,10 @@ class Treenode:
             dist = haversine(self.parent.x, self.parent.y, self.x, self.y)
             arc = math.atan((self.y - self.parent.y)/(self.x - self.parent.x)) / 2*math.pi
             return (0, self.x - self.parent.x, self.y - self.parent.y, self.ele - self.parent.ele, self.pro - self.parent.pro)
+    
+    def getVecDGMG(self):
+        return [self.x, self.y, self.ele, self.pro]
+
 
 def byWeight(edge):
     return edge[2]

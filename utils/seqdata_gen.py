@@ -176,3 +176,39 @@ def genFullSeqRNN(rootNode, isDFS=True):
         result = dfsSeqTreeRNN(rootNode, result)
         result.append(rightp)
     return result
+
+
+def bfsSeqTreeRNN(rootNode):
+    q = list()
+    q.append(rootNode)
+    nodeOrder = []
+    parentDict = dict()
+    while len(q) != 0:
+        node = q.pop(0)
+        nodeOrder.append(node)
+        parentLoc = len(nodeOrder) - 1
+        for child in node.children:
+            q.append(child)
+            parentDict[child.idx] = parentLoc
+    
+    result = []
+    for i, node in enumerate(nodeOrder):
+        if i == 0:
+            result.append(node.getVecDGMG())
+            result.append(1)
+        else:
+            result.append(node.getVecDGMG())
+            result.append(0)
+            result.append(parentDict[node.idx])
+            result.append(1)
+    result.append(1)
+    return result
+
+
+def genFullSeqDGMG(rootNode, isDFS=False):
+    result = []
+    if isDFS:
+        pass
+    else:
+        result = bfsSeqTreeRNN(rootNode)
+    return result
