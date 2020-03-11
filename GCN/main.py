@@ -133,3 +133,5 @@ if __name__ == '__main__':
     opts = setup(args)
 
     main(opts)
+
+# 1000 times, 24 min, averaged_loss: 87000.468750 -> 128.365574,
