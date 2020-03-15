@@ -178,7 +178,7 @@ def genFullSeqRNN(rootNode, isDFS=True):
     return result
 
 
-def bfsSeqTreeRNN(rootNode):
+def bfsSeqTreeDGMG(rootNode):
     q = list()
     q.append(rootNode)
     nodeOrder = []
@@ -210,5 +210,38 @@ def genFullSeqDGMG(rootNode, isDFS=False):
     if isDFS:
         pass
     else:
-        result = bfsSeqTreeRNN(rootNode)
+        result = bfsSeqTreeDGMG(rootNode)
+    return result
+
+
+def bfsSeqTreeHMM(rootNode):
+    q = list()
+    q.append(rootNode)
+    nodeOrder = []
+    while len(q) != 0:
+        node = q.pop(0)
+        nodeOrder.append(node.getVecHMM())
+        for child in node.children:
+            q.append(child)
+
+    return nodeOrder
+
+def dfsSeqTreeHMM(rootNode):
+    stack = list()
+    stack.append(rootNode)
+    nodeOrder = []
+    while len(stack) != 0:
+        node = stack.pop()
+        nodeOrder.append(node.getVecHMM())
+        for child in node.children:
+            stack.append(child)
+
+    return nodeOrder
+
+def genFullSeqHMM(rootNode, isDFS=False):
+    result = []
+    if isDFS:
+        result = dfsSeqTreeHMM(rootNode)
+    else:
+        result = bfsSeqTreeHMM(rootNode)
     return result

@@ -83,6 +83,11 @@ class Treenode:
     def getVecDGMG(self):
         return [self.x, self.y, self.ele, self.pro]
 
+    def getVecHMM(self):
+        if self.parent == None:
+            return [0,0,0,0]
+        else:
+            return [self.x - self.parent.x, self.y - self.parent.y, self.ele - self.parent.ele, self.pro - self.parent.pro]
 
 def byWeight(edge):
     return edge[2]
