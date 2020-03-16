@@ -258,16 +258,17 @@ return pm.summary(trace)['mean']
 ```
 
 
-
 #### Report
 
 **In general:**
 
-$$ p(\Theta | X) = \frac{p(X | \Theta) \cdot p(\Theta)}{p(X)}$$,
+
+$$p(\Theta | X) = \frac{p(X | \Theta) \cdot p(\Theta)}{p(X)}$$
+
 Where:
 
-- $\Theta​$ is the vector of unknown model parameters, that we wish to estimate; 
-- $X​$ is the vector of observed data;
+- $\Theta​$ is the vector of unknown model parameters, that we wish to estimate;  
+- $X​$ is the vector of observed data;  
 - $p(X | \Theta)$ is the likelihood function that models the probability of observing the data for a fixed choice of parameters;
 - $p(\Theta)$ is the prior distribution of the model parameters.
 
@@ -294,6 +295,128 @@ $$dx_B \sim N(\mu, \sigma) ​$$
 Distribution, 100-long prediction, evaluation.
 
 
+
+### HMM
+
+#### Approach
+
+Library: hmmlearn
+
+API: https://hmmlearn.readthedocs.io/en/latest/api.html
+
+```python
+gmm = hmm.GMMHMM(4, 2)
+# gmm = hmm.GaussianHMM(5)
+# gmm = gmm.fit(dfsTrees_flat, lengths)
+# gmm.score(dfsTrees_flat, lengths)
+gmm = gmm.fit(bfsTreeBig)
+# log sum exp
+gmm.score(bfsTreeBig)
+```
+#### Experiment
+
+- Dataset Size:
+  - (one seq) big one, about 1000 peaks
+  - (about 30 seqs) small one, about 30 peaks, sampled by 20km-radius disk
+
+- Sequence order:
+  - BFS
+  - DFS
+
+- GMMHMM parameters:
+  - n_state
+  - n_mix
+
+##### Dataset Size
+
+big one:
+
+![bb](note.assets/hmm_big_exm.png)
+
+small one: 
+
+![ss](note.assets/hmm_small_exm.png)
+
+Longer sequence training dataset can make the prediction tree more complex.
+
+##### Sequence order
+
+BFS:
+
+![bfs](note.assets/hmm_bfs_exm.png)
+
+DFS:
+
+![dfs](note.assets/hmm_dfs_exm.png)
+
+##### Elevation and Prominence
+
+`gmm = hmm.GMMHMM(4, 1)`
+
+Elevation:
+
+![ele](note.assets/hmm_ele_exm.png)
+
+Prominence:
+
+![Pro](note.assets/hmm_pro_exm.png)
+
+##### GMMHMM parameters
+
+more states, more mixture. [6,4]
+
+![dfs](note.assets/hmm_64_dfs_exm.png)
+
+![ele](note.assets/hmm_64_ele_exm.png)
+
+![pro](note.assets/hmm_64_pro_exm.png)
+
+![eled](note.assets/hmm_64_eled_exm.png)
+
+![prod](note.assets/hmm_64_prod_exm.png)
+
+
+
+### Real Data Extraction
+
+Library: 
+- https://github.com/edwardearl/winprom
+- https://github.com/akirmse/mountains
+
+The second one is an update vesion of the first one. 
+The author is Andrew Kirmse.
+
+- blog: http://www.andrewkirmse.com/prominence?pli=1#TOC-Anti-prominence
+- paper: https://journals.sagepub.com/doi/10.1177/0309133317738163
+
+#### DEM data
+
+"SRTM":  
+
+- Shuttle Radar Topography Mission -- NASA
+
+- SRTM3(for world, 3 arc-seconds): http://www.webgis.com/srtm3.html, download here
+
+"NED13-ZIP","NED1-ZIP":
+
+- Higher resolution, America.
+- download: https://viewer.nationalmap.gov/basic/
+
+
+### Questions
+
+1. Mathematically evaluation method. A number.
+   
+   Thought now: 
+   - implement saddles rebuilding function, rebuild saddles by prominence values
+   - get all data iterms used in Oscar's work
+   - run Oscar's classification code to see if the generated tree can be classified correctly.
+   - score = correct times / all times
+2. Dataset
+
+   - have tried SRTM-3
+   - need to do scoping work to find the area we are intetested in.
+   - If we trying to train a GCN model, do we need to generate some fake trainning data?
 
 
 
