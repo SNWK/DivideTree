@@ -80,7 +80,7 @@ class Treenode:
             arc = math.atan((self.y - self.parent.y)/(self.x - self.parent.x)) / 2*math.pi
             return (0, self.x - self.parent.x, self.y - self.parent.y, self.ele - self.parent.ele, self.pro - self.parent.pro)
     
-    def getVecDGMG(self):
+    def getVecOrigin(self):
         return [self.x, self.y, self.ele, self.pro]
 
     def getVecHMM(self):
@@ -198,3 +198,53 @@ def getTreeHMC(peaks):
         v, w, _ = r
         result.append([peaks[v], peaks[w]])
     return result
+
+def genDivideTreePredict(peaks):
+    gsample = Graph()
+    pairs = set()
+    for v in range(len(peaks)):
+        for w in range(len(peaks)):
+            if v != w and (v, w) not in pairs and (w, v) not in pairs:
+                pairs.add((v, w))
+                lat1 = peaks[v][0]
+                lon1 = peaks[v][1]
+                lat2 = peaks[w][0]
+                lon2 = peaks[w][1]
+                dist = haversine(lon1, lat1, lon2, lat2)
+                gsample.add_edge(v, w, dist)
+    treesample = minimum_spanning_tree(gsample)
+
+    # For test, draw the tree
+    # drawTree(peaks, treesample)
+    ele = [e[2] for e in peaks]
+    rootidx = ele.index(max(ele))
+    rootNode = Treenode(rootidx, peaks[rootidx][0], 
+                        peaks[rootidx][1], peaks[rootidx][2], 
+                        peaks[rootidx][3], None)
+    
+    edges = {}
+    for edge in treesample:
+        v, w, _ = edge
+        if v not in edges.keys():
+            edges[v] = []
+        if w not in edges.keys():
+            edges[w] = []
+        edges[v].append(w)
+        edges[w].append(v)
+    
+    queue = []
+    queue.append(rootidx)
+    while queue:
+        nodeidx = queue.pop()
+        node = getTreeNodeByIdx(rootNode, nodeidx)
+        # print("parent",node.idx)
+        for childrenidx in edges[nodeidx]:
+            # print("parent",node.idx, "child", childrenidx)
+            childnode = Treenode(childrenidx, peaks[childrenidx][0], 
+                        peaks[childrenidx][1], peaks[childrenidx][2], 
+                        peaks[childrenidx][3], node)
+            node.children.append(childnode)
+            edges[childrenidx].remove(nodeidx)
+            queue.append(childrenidx)
+
+    return rootNode
