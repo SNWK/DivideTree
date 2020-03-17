@@ -64,7 +64,7 @@ class UnionFind:
 
 class Treenode:
     def __init__(self, idx, x, y, ele, pro, par):
-        self.idx= idx
+        self.idx = idx
         self.x = x
         self.y = y
         self.ele = ele

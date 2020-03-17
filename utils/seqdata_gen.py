@@ -245,3 +245,16 @@ def genFullSeqHMM(rootNode, isDFS=False):
     else:
         result = bfsSeqTreeHMM(rootNode)
     return result
+
+def genFullSeqExample(rootNode, isDFS=False):
+    q = list()
+    q.append(rootNode)
+    nodeOrder = []
+    while len(q) != 0:
+        node = q.pop(0)
+        if node.parent != None:
+            nodeOrder.append((node.parent.getVecDGMG(), node.getVecDGMG()))
+        for child in node.children:
+            q.append(child)
+
+    return nodeOrder
