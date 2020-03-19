@@ -306,18 +306,15 @@ API: https://hmmlearn.readthedocs.io/en/latest/api.html
 
 ```python
 gmm = hmm.GMMHMM(4, 2)
-# gmm = hmm.GaussianHMM(5)
-# gmm = gmm.fit(dfsTrees_flat, lengths)
-# gmm.score(dfsTrees_flat, lengths)
 gmm = gmm.fit(bfsTreeBig)
-# log sum exp
 gmm.score(bfsTreeBig)
 ```
 #### Experiment
 
 - Dataset Size:
-  - (one seq) big one, about 1000 peaks
-  - (about 30 seqs) small one, about 30 peaks, sampled by 20km-radius disk
+  - extract data by 30 km-radius disk from the area contains 4314 peaks.
+  - most of sample areas contain less than 100 peaks because that the real data area is sparse.
+  ![data distribution](note.assets/hmm_dataset.png)
 
 - Sequence order:
   - BFS
@@ -327,53 +324,59 @@ gmm.score(bfsTreeBig)
   - n_state
   - n_mix
 
-##### Dataset Size
+##### Tree similarity measure
 
-big one:
+Method: Tree edit distance
 
-![bb](note.assets/hmm_big_exm.png)
+Edit operation:
+- remove, insert: cost = 10
+- replace: $cost=\Sigma_i^4(weight_i * (nodeA_i - nodeB_i)^2)$  
+  weight=[10000, 10000, 0.0001, 0.0001], because that the magnitude of dx and dy is 0.01, magnitude of dele and dpro is 100. from statistic
 
-small one: 
+##### Grid search for the best parameters
 
-![ss](note.assets/hmm_small_exm.png)
+number_state is in (2,10)
+number_mixture is in (1,10)
 
-Longer sequence training dataset can make the prediction tree more complex.
+- For each parameter set, train the gmmHMM model.
+- For each real data which contains less than 200 peaks, use the model to predict three same length trees, compute the edit distance, then average them.
+- Finally, sort and get the result
 
-##### Sequence order
+##### Grid search result
+
+BFS:  (best 5)  
+[n_stat, n_mix, avg_distance]  
+[9, 1, 2041.6245745822623]  
+[3, 3, 2042.3688535973652]  
+[2, 2, 2043.9046897068065]  
+[7, 1, 2047.1612385914966]  
+[4, 1, 2047.6499284300685]  
+
+DFS:  (best 5)  
+[n_stat, n_mix, avg_distance] 
+[3, 1, 2036.4913110658363]  
+[8, 1, 2038.0760442749372]  
+[3, 5, 2041.7911424764156]  
+[2, 2, 2042.889998269072]  
+[2, 3, 2043.0939437036423]  
+
+##### Prediction
 
 BFS:
-
-![bfs](note.assets/hmm_bfs_exm.png)
+- prediction
+![hmm_91_bf](note.assets/hmm_91_bfs.png)  
+- elevation difference
+![hmm_91_ele](note.assets/hmm_91_ele.png)  
+- prominence difference
+![hmm_91_pro](note.assets/hmm_91_pro.png)
 
 DFS:
-
-![dfs](note.assets/hmm_dfs_exm.png)
-
-##### Elevation and Prominence
-
-`gmm = hmm.GMMHMM(4, 1)`
-
-Elevation:
-
-![ele](note.assets/hmm_ele_exm.png)
-
-Prominence:
-
-![Pro](note.assets/hmm_pro_exm.png)
-
-##### GMMHMM parameters
-
-more states, more mixture. [6,4]
-
-![dfs](note.assets/hmm_64_dfs_exm.png)
-
-![ele](note.assets/hmm_64_ele_exm.png)
-
-![pro](note.assets/hmm_64_pro_exm.png)
-
-![eled](note.assets/hmm_64_eled_exm.png)
-
-![prod](note.assets/hmm_64_prod_exm.png)
+- prediction
+![hmm_31_dfs](note.assets/hmm_31_dfs.png)  
+- elevation difference
+![hmm_31_ele](note.assets/hmm_31_ele.png)  
+- prominence difference
+![hmm_31_pro](note.assets/hmm_31_pro.png)
 
 
 
@@ -401,22 +404,6 @@ The author is Andrew Kirmse.
 
 - Higher resolution, America.
 - download: https://viewer.nationalmap.gov/basic/
-
-
-### Questions
-
-1. Mathematically evaluation method. A number.
-   
-   Thought now: 
-   - implement saddles rebuilding function, rebuild saddles by prominence values
-   - get all data iterms used in Oscar's work
-   - run Oscar's classification code to see if the generated tree can be classified correctly.
-   - score = correct times / all times
-2. Dataset
-
-   - have tried SRTM-3
-   - need to do scoping work to find the area we are intetested in.
-   - If we trying to train a GCN model, do we need to generate some fake trainning data?
 
 
 

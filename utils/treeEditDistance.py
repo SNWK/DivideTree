@@ -2,13 +2,14 @@ import zss
 import math
 
 def weird_dist(a, b):
+    weights = [10000, 10000, 0.0001, 0.0001]
     dist = 0
     if a == '' or b == '':
         # remove/insert cost
-        return 1000
+        return 10
     for i in range(4):
         # replace cost
-        dist += pow(a[i] - b[i], 2)
+        dist += weights[i]*pow(a[i] - b[i], 2)
     return math.sqrt(dist)
 
 class WeirdNode(object):
