@@ -13,6 +13,14 @@ import matplotlib.pyplot as plt
 from utils.divtree_gen import *
 import random
 
+from utils.coords import *
+from utils.noise import *
+from utils.metrics import *
+from analysis.peaksdata import *
+
+import pickle
+import pandas as pd
+
 predict_len=20
 temperature=0.8
 maxprelen = 8
@@ -127,21 +135,20 @@ def drawResult(name, path):
     
 # Run as standalone script
 if __name__ == '__main__':
-
-# Parse command line arguments
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('filename', type=str)
-    argparser.add_argument('-l', '--predict_len', type=int, default=10)
-    argparser.add_argument('--cuda', action='store_true')
-    args = argparser.parse_args()
-
-    decoder = torch.load(args.filename)
-    del args.filename
-    if args.cuda:
-        decoder.cuda()
-    v, _ = generate(decoder, 50, cuda=args.cuda)
-    print(v)
-#     for i in range(10):
-#         result = generate(decoder, **vars(args))
-#         drawResult('test'+str(i), result)
+    print(os.getcwd())
+    regionName = 'andes_peru'
+    peaksFile = '../data/regionPeaks/%s.csv' % regionName
+    df = pd.read_csv(peaksFile)
+    # compute distributions
+    df = addExtraColumns(df)
+    ptFilename = 'andes_perulittle.pt'
+    predict_len = 100
+    decoder = torch.load(ptFilename)
+    vsequence, predicted = generate(decoder, predict_len, cuda=True, filename='../data/regionTreeSeqs/andes_perulittle.txt')
+    pointlist = [[df.mean()['longitude'], df.mean()['latitude'], df.mean()['elevation in feet'],df.mean()['prominence in feet']]]
+    for i in predicted:
+        pointlist.append([pointlist[-1][0] + i[1], pointlist[-1][1] + i[2], pointlist[-1][2] + i[3], pointlist[-1][3] + i[4]])
+    with open('gened100.data', 'wb') as f:
+        pickle.dump(pointlist, f)
+    
 
