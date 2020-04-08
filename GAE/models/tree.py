@@ -1,8 +1,9 @@
 
 import sys
 sys.path.insert(0, '../helpers')
-sys.path.insert(0, '../../
-from utils.divtree_gen import *')
+sys.path.insert(0, '../../')
+from utils.divtree_gen import *
+from datautils import *
 
 
 class TreeNode(object):
@@ -21,18 +22,16 @@ class DTree(object):
 
     def __init__(self, peaks):
         
-        self.radius = radius
         self.nodes = dict()
 
         # clique contains componetes , len = 1 -> singleton, len > 1 ring ...
         # edges: the tree's connections over cliques
 
-        self.root, edges = tree_extract(peaks)
+        self.root, edges, self.peaks = tree_extract(peaks)
 
-        for i,p in enumerate(peaks):
-            node = TreeNode(get_feature(p), i)
-            if p not in self.nodes.keys():
-                self.nodes[p] = node
+        for i,p in enumerate(peaks.index):
+            node = TreeNode(get_feature(p, peaks), i)
+            self.nodes[p] = node
 
         for x,y in edges:
             self.nodes[x].add_neighbor(self.nodes[y])

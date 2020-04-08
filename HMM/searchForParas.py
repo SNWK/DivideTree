@@ -25,6 +25,23 @@ import math
 
 from hmmlearn import hmm
 
+
+def kldistance(distribution, synthesisValues):
+    hbins  = distribution['bins']
+    hmids  = distribution['x']
+    hReal  = distribution['hist']
+    hSynth = histogramFromBins(synthesisValues, hbins, frequencies=False)
+    hNorm  = np.round(synthesisValues.size * hReal/hReal.sum())
+    # smooth
+    hNorm += 1
+    hSynth += 1
+    phNorm = hNorm / sum(hNorm)
+    phSynth = hSynth / sum(hSynth)
+    distance = 0
+    for i in range(len(phNorm)):
+        distance += phSynth[i]*(math.log(phSynth[i]) - math.log(phNorm[i]))
+    return distance
+
 np.random.seed(42)
 
 promEpsilon   = 30   # m,  minimum prominence threshold in the analysis
@@ -84,6 +101,7 @@ print('Peaks:', df.shape[0])
 
 # compute distributions
 df = addExtraColumns(df)
+distributions = computeDistributions(df, diskRadius)
 
 import pickle
 bfsseqdata_file_name = 'HMM_Seq_bfs.data'
@@ -116,24 +134,6 @@ else:
     with open(dfsseqdata_file_name, 'wb') as seqdata_file:
         pickle.dump(dfsTrees, seqdata_file)
 
-# bfsseqdata_file_name = 'HMM_Seq_bfs_big.data'
-# dfsseqdata_file_name = 'HMM_Seq_dfs_big.data'
-
-# if os.path.exists(bfsseqdata_file_name) and os.path.exists(dfsseqdata_file_name):
-#     with open(bfsseqdata_file_name, 'rb') as seqdata_file:
-#         bfsTreeBig = pickle.load(seqdata_file)
-#     with open(dfsseqdata_file_name, 'rb') as seqdata_file:
-#         dfsTreeBig = pickle.load(seqdata_file)
-# else:
-#     rootNode = genDivideTree(df)
-#     bfsTreeBig = genFullSeqHMM(rootNode, isDFS=False)
-#     dfsTreeBig = genFullSeqHMM(rootNode, isDFS=True)
-
-#     with open(bfsseqdata_file_name, 'wb') as seqdata_file:
-#         pickle.dump(bfsTreeBig, seqdata_file)
-#     with open(dfsseqdata_file_name, 'wb') as seqdata_file:
-#         pickle.dump(dfsTreeBig, seqdata_file)
-
 # little dataset
 lengths = []
 bfsTrees_flat = []
@@ -149,8 +149,8 @@ diskRadius = 30
 sampleLocations = sampleShapefileLocations(os.path.join(regionShapesDir, 'andes_peru.shp'), diskRadius)
 gridsearch = dict()
 time_1 = time.time()
-for n_state in range(2,10):
-    for n_mix in range(1,10):
+for n_state in range(2,15):
+    for n_mix in range(1,15):
         try:
             gmm = hmm.GMMHMM(n_state, n_mix)
             # gmm = hmm.GaussianHMM(4)
@@ -172,7 +172,7 @@ for n_state in range(2,10):
                         peaks['prominence in feet'].loc[highestIidx]]
                 # tree B
                 predictLen = len(peaks)
-                for btime in range(3):
+                for btime in range(5):
                     pointlist = [highest]
                     deltaslist = [[0.0, 0.0, 0.0, 0.0]]
                     predict = gmm.sample(predictLen)[0]
@@ -185,14 +185,20 @@ for n_state in range(2,10):
                         pointlist.append(point)
                     broot = genDivideTreePredict(pointlist)
                     B = buildTree(broot)
-                    # distance
+                    # tree edit distance
                     dist = getDistance(A,B)
+                    # kl distance
+                    apointlist = np.array(pointlist)
+                    elepre = [feet2m(apointlist[i][2]) for i in range(predictLen+1)]
+                    propre = [feet2m(apointlist[i][3]) for i in range(predictLen+1)]
+                    kldist = kldistance(distributions['elevation'], np.array(elepre))/2 + kldistance(distributions['prominence'], np.array(propre))/2
                     print(n_state, n_mix, dist)
                     if (n_state, n_mix) not in gridsearch.keys():
-                        gridsearch[(n_state, n_mix)] = [dist, 1]
+                        gridsearch[(n_state, n_mix)] = [dist/(predictLen+1), 1, kldist]
                     else:
-                        gridsearch[(n_state, n_mix)][0] += dist
+                        gridsearch[(n_state, n_mix)][0] += dist/(predictLen+1)
                         gridsearch[(n_state, n_mix)][1] += 1
+                        gridsearch[(n_state, n_mix)][2] += kldist
 
         except BaseException:
             continue
@@ -200,12 +206,12 @@ for n_state in range(2,10):
 time_2 = time.time()
 print(dist, time_2 - time_1)
 
-with open('gridsearch_new.dict', 'wb') as f:
+with open('gridsearch_new_bfs.dict', 'wb') as f:
     pickle.dump(gridsearch, f)
 
 print('n_state, n_mix, edit_dist')
 gridsearch_list = []
 for k in gridsearch.keys():
-    gridsearch_list.append([k[0], k[1], gridsearch[k][0]/gridsearch[k][1]] )
+    gridsearch_list.append([k[0], k[1], gridsearch[k][0]/gridsearch[k][1]+ gridsearch[k][2]/gridsearch[k][1]] )
 for n in sorted(gridsearch_list, key=lambda y: y[2]):
     print(n)

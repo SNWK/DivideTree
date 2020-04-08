@@ -28,22 +28,28 @@ regionTreeSeqsDir = 'data/regionTreeSeqs'
 
 regionShapes = ['andes_peru.shp']
 
+region = regionShapes[0]
+allpeaksdf = pd.read_csv(os.path.join(regionPeaksDir, region.replace('.shp', '.csv')))
+
+
+
 def tree_extract(peaks):
     # region peaks DB
-    region = regionShapes[0]
-    df = pd.read_csv(os.path.join(regionPeaksDir, region.replace('.shp', '.csv')))
-    rootidx = peaks['elevation in feet'].idxmax()
     xmin = peaks['longitude'].min()
     xmax = peaks['longitude'].max()
     ymin = peaks['latitude'].min()
     ymax = peaks['latitude'].max()
     peaks['longitude'] = (peaks['longitude'] - xmin) / (xmax - xmin)
     peaks['latitude'] = (peaks['latitude'] - ymin) / (ymax - ymin)
-        
-    return mstGnn(peaks)
+    
+    rootidx, edges = mstGnn(peaks)
+    return rootidx, edges, peaks
+
+def get_feature(p, peaks):
+    return [peaks['longitude'].loc[p], peaks['latitude'].loc[p], 
+        peaks['elevation in feet'].loc[p], peaks['prominence in feet'].loc[p]]
 
 
-print('done!')
 class PairTreeFolder(object):
 
     def __init__(self, data_folder, vocab, batch_size, num_workers=4, shuffle=True, y_assm=True, replicate=None):
