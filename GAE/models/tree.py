@@ -1,9 +1,9 @@
-
-import sys
-sys.path.insert(0, '../helpers')
-sys.path.insert(0, '../../')
+import sysconfig, os, sys
+o_path = os.getcwd()
+sys.path.append(o_path)
+sys.path.append("..") 
 from utils.divtree_gen import *
-from datautils import *
+from helpers.datautils import *
 
 
 class TreeNode(object):
@@ -27,12 +27,16 @@ class DTree(object):
         # clique contains componetes , len = 1 -> singleton, len > 1 ring ...
         # edges: the tree's connections over cliques
 
-        self.root, edges, self.peaks = tree_extract(peaks)
+        self.root, edgesDict, self.peaks = tree_extract(peaks)
 
         for i,p in enumerate(peaks.index):
             node = TreeNode(get_feature(p, peaks), i)
             self.nodes[p] = node
-
+        edges = []
+        for node in edgesDict.keys():
+            if edgesDict[node] != []:
+                for i in edgesDict[node]:
+                    edges.append([node, i])
         for x,y in edges:
             self.nodes[x].add_neighbor(self.nodes[y])
             self.nodes[y].add_neighbor(self.nodes[x])
@@ -40,11 +44,11 @@ class DTree(object):
     def size(self):
         return len(self.nodes)
 
-def dfs(node, fa_idx):
+def dfs_t(node, fa_idx):
     max_depth = 0
     for child in node.neighbors:
         if child.idx == fa_idx: continue
-        max_depth = max(max_depth, dfs(child, node.idx))
+        max_depth = max(max_depth, dfs_t(child, node.idx))
     return max_depth + 1
 
 
