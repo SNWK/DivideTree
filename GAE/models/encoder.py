@@ -2,7 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from collections import deque
-from tree import DTree
+import sys, os
+o_path = os.getcwd()
+sys.path.append(o_path)
+from models.tree import *
 
 from nnutils import create_var, index_select_ND
 
@@ -50,7 +53,10 @@ class Encoder(nn.Module):
         scope = []
         for tree in tree_batch:
             scope.append( (len(node_batch), len(tree.nodes)) )
-            node_batch.extend(tree.nodes)
+            nodeslist = []
+            for i in tree.nodes.keys():
+                nodeslist.append(tree.nodes[i])
+            node_batch.extend(nodeslist)
 
         return Encoder.tensorize_nodes(node_batch, scope)
     
@@ -59,22 +65,26 @@ class Encoder(nn.Module):
         messages,mess_dict = [None],{}
         fnode = []
         for x in node_batch:
-            fnode.append(x.wid)
+            fnode.append(x.feature)
             for y in x.neighbors:
-                mess_dict[(x.idx,y.idx)] = len(messages)
+                mess_dict[(x.graphid,y.graphid)] = len(messages)
                 messages.append( (x,y) )
 
         node_graph = [[] for i in xrange(len(node_batch))]
+        # node_graph = {}
+        # for n in node_batch:
+        #     node_graph[n.idx] = []
+
         mess_graph = [[] for i in xrange(len(messages))]
         fmess = [0] * len(messages)
 
         for x,y in messages[1:]:
-            mid1 = mess_dict[(x.idx,y.idx)]
-            fmess[mid1] = x.idx 
-            node_graph[y.idx].append(mid1)
+            mid1 = mess_dict[(x.graphid,y.graphid)]
+            fmess[mid1] = x.graphid 
+            node_graph[y.graphid].append(mid1)
             for z in y.neighbors:
-                if z.idx == x.idx: continue
-                mid2 = mess_dict[(y.idx,z.idx)]
+                if z.graphid == x.graphid: continue
+                mid2 = mess_dict[(y.graphid,z.graphid)]
                 mess_graph[mid2].append(mid1)
 
         max_len = max([len(t) for t in node_graph] + [1])
@@ -88,9 +98,9 @@ class Encoder(nn.Module):
             t.extend([0] * pad_len)
 
         mess_graph = torch.LongTensor(mess_graph)
-        node_graph = torch.LongTensor(node_graph)
+        node_graph = torch.LongTensor(node_graph) # graphid 
         fmess = torch.LongTensor(fmess)
-        fnode = torch.LongTensor(fnode)
+        fnode = torch.LongTensor(fnode) # idx
         return (fnode, fmess, node_graph, mess_graph, scope), mess_dict
 
 class GraphGRU(nn.Module):

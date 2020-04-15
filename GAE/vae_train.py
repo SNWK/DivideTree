@@ -12,10 +12,15 @@ from collections import deque
 import cPickle as pickle
 
 from models import *
+from helpers import *
 
+from models.tree import *
+from models.vae import *
+from helpers.datautils import *
+
+# python vae_train.py --train dataset/ --save_dir vae_model/
 parser = argparse.ArgumentParser()
 parser.add_argument('--train', required=True)
-parser.add_argument('--vocab', required=True)
 parser.add_argument('--save_dir', required=True)
 parser.add_argument('--load_epoch', type=int, default=0)
 
@@ -68,7 +73,7 @@ beta = args.beta
 meters = np.zeros(4)
 
 for epoch in xrange(args.epoch):
-    loader = TreeFolder(args.train, args.batch_size, num_workers=4)
+    loader = DTreeFolder(args.train, args.batch_size)
     for batch in loader:
         total_step += 1
         try:

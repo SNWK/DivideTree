@@ -5,9 +5,10 @@ from tree import DTree
 from nnutils import create_var, flatten_tensor, avg_pool
 from encoder import Encoder
 from decoder import Decoder
-from mpn import MPN
-from jtmpn import JTMPN
-from datautils import tensorize
+import sys, os
+o_path = os.getcwd()
+sys.path.append(o_path)
+from helpers.datautils import tensorize
 
 import copy, math
 
@@ -59,7 +60,7 @@ class VAE(nn.Module):
 
     def forward(self, x_batch, beta):
         x_batch, x_jtenc_holder = x_batch
-        x_tree_vecs, x_tree_mess, x_mol_vecs = self.encode(x_jtenc_holder)
+        x_tree_vecs, x_tree_mess = self.encode(x_jtenc_holder)
         z_tree_vecs,tree_kl = self.rsample(x_tree_vecs, self.T_mean, self.T_var)
 
         kl_div = tree_kl 

@@ -9,6 +9,7 @@ from helpers.datautils import *
 class TreeNode(object):
 
     def __init__(self, feature, idx):
+        self.graphid = idx
         self.idx = idx
         self.feature = feature
         self.neighbors = []

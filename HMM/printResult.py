@@ -1,6 +1,6 @@
 import pickle
 
-with open('gridsearch_new_bfs.dict', 'rb') as f:
+with open('gridsearch_new_dfs.dict', 'rb') as f:
     gridsearch = pickle.load(f)
 
 print('n_state, n_mix, kl_dist, edit_dist')

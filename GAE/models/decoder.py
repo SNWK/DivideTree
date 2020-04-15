@@ -64,7 +64,7 @@ class Decoder(nn.Module):
         #Predict Root
         batch_size = len(mol_batch)
         pred_hiddens.append(create_var(torch.zeros(len(mol_batch),self.hidden_size)))
-        pred_targets.extend([mol_tree.nodes[0].wid for mol_tree in mol_batch])
+        pred_targets.extend([mol_tree.nodes[0].feature for mol_tree in mol_batch]) # wid
         pred_contexts.append( create_var( torch.LongTensor(range(batch_size)) ) )
 
         max_iter = max([len(tr) for tr in traces])
@@ -84,13 +84,13 @@ class Decoder(nn.Module):
 
             for node_x, real_y, _ in prop_list:
                 #Neighbors for message passing (target not included)
-                cur_nei = [h[(node_y.idx,node_x.idx)] for node_y in node_x.neighbors if node_y.idx != real_y.idx]
+                cur_nei = [h[(node_y.graphid,node_x.graphid)] for node_y in node_x.neighbors if node_y.graphid != real_y.graphid]
                 pad_len = MAX_NB - len(cur_nei)
                 cur_h_nei.extend(cur_nei)
                 cur_h_nei.extend([padding] * pad_len)
 
                 #Neighbors for stop prediction (all neighbors)
-                cur_nei = [h[(node_y.idx,node_x.idx)] for node_y in node_x.neighbors]
+                cur_nei = [h[(node_y.graphid,node_x.graphid)] for node_y in node_x.neighbors]
                 pad_len = MAX_NB - len(cur_nei)
                 cur_o_nei.extend(cur_nei)
                 cur_o_nei.extend([padding] * pad_len)
@@ -115,7 +115,7 @@ class Decoder(nn.Module):
             stop_target = []
             for i,m in enumerate(prop_list):
                 node_x,node_y,direction = m
-                x,y = node_x.idx,node_y.idx
+                x,y = node_x.graphid,node_y.graphid
                 h[(x,y)] = new_h[i]
                 node_y.neighbors.append(node_x)
                 if direction == 1:
@@ -145,7 +145,7 @@ class Decoder(nn.Module):
         for mol_tree in mol_batch:
             node_x = mol_tree.nodes[0]
             cur_x.append(node_x.feature)
-            cur_nei = [h[(node_y.idx,node_x.idx)] for node_y in node_x.neighbors]
+            cur_nei = [h[(node_y.graphid,node_x.graphid)] for node_y in node_x.neighbors]
             pad_len = MAX_NB - len(cur_nei)
             cur_o_nei.extend(cur_nei)
             cur_o_nei.extend([padding] * pad_len)
@@ -199,15 +199,16 @@ class Decoder(nn.Module):
         # _,root_wid = torch.max(root_score, dim=1)
         # root_wid = root_wid.item()
 
-        root = MolTreeNode(root_feature)
+        root = TreeNode(root_feature)
         root.idx = 0
+        root.graphid = 0
         stack.append( (root, root_feature) )
 
         all_nodes = [root]
         h = {}
         for step in xrange(MAX_DECODE_LEN):
             node_x,fa_slot = stack[-1]
-            cur_h_nei = [ h[(node_y.idx,node_x.idx)] for node_y in node_x.neighbors ]
+            cur_h_nei = [ h[(node_y.graphid,node_x.graphid)] for node_y in node_x.neighbors ]
             if len(cur_h_nei) > 0:
                 cur_h_nei = torch.stack(cur_h_nei, dim=0).view(1,-1,self.hidden_size)
             else:
@@ -231,10 +232,11 @@ class Decoder(nn.Module):
                 new_h = GRU(cur_x, cur_h_nei, self.W_z, self.W_r, self.U_r, self.W_h)
                 pred_feature = self.aggregate(new_h, contexts, x_tree_vecs, 'word')
 
-                node_y = MolTreeNode(pred_feature)
+                node_y = TreeNode(pred_feature)
                 node_y.idx = len(all_nodes)
+                node_y.graphid = len(all_nodes)
                 node_y.neighbors.append(node_x)
-                h[(node_x.idx,node_y.idx)] = new_h[0]
+                h[(node_x.graphid,node_y.graphid)] = new_h[0]
                 stack.append( (node_y,pred_feature) )
                 all_nodes.append(node_y)
 
@@ -243,14 +245,14 @@ class Decoder(nn.Module):
                     break #At root, terminate
 
                 node_fa,_ = stack[-2]
-                cur_h_nei = [ h[(node_y.idx,node_x.idx)] for node_y in node_x.neighbors if node_y.idx != node_fa.idx ]
+                cur_h_nei = [ h[(node_y.graphid,node_x.graphid)] for node_y in node_x.neighbors if node_y.idx != node_fa.idx ]
                 if len(cur_h_nei) > 0:
                     cur_h_nei = torch.stack(cur_h_nei, dim=0).view(1,-1,self.hidden_size)
                 else:
                     cur_h_nei = zero_pad
 
                 new_h = GRU(cur_x, cur_h_nei, self.W_z, self.W_r, self.U_r, self.W_h)
-                h[(node_x.idx,node_fa.idx)] = new_h[0]
+                h[(node_x.graphid,node_fa.graphid)] = new_h[0]
                 node_fa.neighbors.append(node_x)
                 stack.pop()
 
@@ -261,9 +263,9 @@ Helper Functions:
 """
 def dfs(stack, x, fa_idx):
     for y in x.neighbors:
-        if y.idx == fa_idx: continue
+        if y.graphid == fa_idx: continue
         stack.append( (x,y,1) )
-        dfs(stack, y, x.idx)
+        dfs(stack, y, x.graphid)
         stack.append( (y,x,0) )
 
 def have_slots(fa_slots, ch_slots):
