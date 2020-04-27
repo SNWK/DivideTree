@@ -258,3 +258,41 @@ def genFullSeqExample(rootNode, isDFS=False):
             q.append(child)
 
     return nodeOrder
+
+def genDataMolGAN(peaks):
+    # For demo
+    vertices = list(peaks.index)
+    gsample = Graph()
+    pairs = set()
+    for v in vertices:
+        for w in vertices:
+            if v != w and (v, w) not in pairs and (w, v) not in pairs:
+                pairs.add((v, w))
+                lat1 = peaks['latitude'].loc[v]
+                lon1 = peaks['longitude'].loc[v]
+                lat2 = peaks['latitude'].loc[w]
+                lon2 = peaks['longitude'].loc[w]
+                dist = math.sqrt(pow(lat1 - lat2, 2) + pow(lon1 - lon2, 2))
+                gsample.add_edge(v, w, dist)
+    treesample = minimum_spanning_tree(gsample)
+
+    xmin = peaks['longitude'].min()
+    xmax = peaks['longitude'].max()
+    ymin = peaks['latitude'].min()
+    ymax = peaks['latitude'].max()
+    peaks['longitude'] = (peaks['longitude'] - xmin) / (xmax - xmin)
+    peaks['latitude'] = (peaks['latitude'] - ymin) / (ymax - ymin)
+
+    A = [[0 for i in range(len(vertices))] for j in range(len(vertices))]
+    X = []
+
+    for v in vertices:
+        X.append([peaks['longitude'].loc[v], peaks['latitude'].loc[v], 
+                peaks['elevation in feet'].loc[v], peaks['prominence in feet'].loc[v]])
+
+    for edges in treesample:
+        v, w, d = edges
+        A[vertices.index(v)][vertices.index(w)] = 1
+        A[vertices.index(w)][vertices.index(v)] = 1
+
+    return len(vertices), A, X
