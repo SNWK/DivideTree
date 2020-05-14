@@ -4,3 +4,6 @@ prominence-p100.txt
 *.ckpt
 *.sparsedataset
 *.pkl
+*.data
+*.log
+*.pyc
