@@ -92,9 +92,3 @@ torch.optim.SGD(decoder.parameters(), lr=args.learning_rate,  momentum=0.9)
    ```
 
 4. And then using the last 8 node to predict the next one. repeat.
-
--1 ]
-
-0 p
-
-1 ]

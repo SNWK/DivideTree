@@ -71,20 +71,20 @@ DFS:  (best 5)
 
 BFS:
 - prediction
-![hmm_23_bf](note.assets/hmm_23_bfs.png)  
+![hmm_23_bf](./note.assets/hmm_23_bfs.png)  
 - elevation difference  
   kl-divergence: 0.37995966468916076
-![hmm_23_ele](note.assets/hmm_23_ele.png)  
+![hmm_23_ele](./note.assets/hmm_23_ele.png)  
 - prominence difference   
   kl-divergence:  0.5359863864553517
-![hmm_23_pro](note.assets/hmm_23_pro.png)
+![hmm_23_pro](./note.assets/hmm_23_pro.png)
 
 DFS:
 - prediction
-![hmm_25_dfs](note.assets/hmm_25_dfs.png)  
+![hmm_25_dfs](./note.assets/hmm_25_dfs.png)  
 - elevation difference   
   kl-divergence:  0.5518457839992101
-![hmm_25_ele](note.assets/hmm_25_ele.png)  
+![hmm_25_ele](./note.assets/hmm_25_ele.png)  
 - prominence difference 
   kl-divergence:  0.6420304930445037
-![hmm_25_pro](note.assets/hmm_25_pro.png)
+![hmm_25_pro](./note.assets/hmm_25_pro.png)
