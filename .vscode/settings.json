@@ -1,3 +1,4 @@
 {
-    "python.formatting.provider": "yapf"
+    "python.formatting.provider": "yapf",
+    "python.pythonPath": "/home/e/e0509826/anaconda3/envs/pytorch/bin/python"
 }

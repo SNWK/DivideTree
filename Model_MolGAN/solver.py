@@ -188,7 +188,8 @@ class Solver(object):
 
         return [delistify(e) for e in (softmax)]
 
-    def reward(self, mols):
+    def reward(self, A, X):
+        # adjacent matrix
         rr = 1.
         # for m in ('logp,sas,qed,unique' if self.metric == 'all' else self.metric).split(','):
 
@@ -302,13 +303,13 @@ class Solver(object):
                 g_loss_fake = - torch.mean(logits_fake)
 
                 # Real Reward
-                rewardR = torch.from_numpy(np.array(self.reward(mols))).to(self.device)
+                rewardR = torch.from_numpy(np.array(self.reward(a, x))).to(self.device)
                 # Fake Reward
                 (edges_hard, nodes_hard) = self.postprocess((edges_logits, nodes_logits), 'hard_gumbel')
                 edges_hard, nodes_hard = torch.max(edges_hard, -1)[1], nodes_hard
                 # mols = [self.data.matrices2mol(n_.data.cpu().numpy(), e_.data.cpu().numpy(), strict=True)
                 #         for e_, n_ in zip(edges_hard, nodes_hard)]
-                # rewardF = torch.from_numpy(self.reward(mols)).to(self.device)
+                # rewardF = torch.from_numpy(self.reward(edges_hat, nodes_logits)).to(self.device)
                 rewardF = rewardR
                 # Value loss
                 value_logit_real,_ = self.V(a_tensor, None, x_tensor, torch.sigmoid)
@@ -384,8 +385,8 @@ class Solver(object):
             # Postprocess with Gumbel softmax
             (edges_hat, nodes_hat) = self.postprocess((edges_logits, nodes_logits), self.post_method)
             A = torch.max(edges_hat, -1)[1]
-            print(A.data.cpu().numpy())
-            print(nodes_logits.data.cpu().numpy())
+            # print(A.data.cpu().numpy())
+            # print(nodes_logits.data.cpu().numpy())
             drawTree(A.data.cpu().numpy(), nodes_logits.data.cpu().numpy()[0])
             # logits_fake, features_fake = self.D(edges_hat, None, nodes_hat)
             # g_loss_fake = - torch.mean(logits_fake)
