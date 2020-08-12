@@ -77,5 +77,12 @@ Compare to other methods:
 ![hmmRnnEval](res/hmm&rnn.png)
 
 
+## TODO  
+
+1. Reward machine:  
+- connectivity: 1 / number of strong connected subgraphs  
+- bad edges ratio: (all edges - MST edges) / all edges  
+
+
 
 

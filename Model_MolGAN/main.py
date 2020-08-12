@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     # Miscellaneous.
     parser.add_argument('--num_workers', type=int, default=1)
-    parser.add_argument('--mode', type=str, default='test', choices=['train', 'test'])
+    parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
     parser.add_argument('--use_tensorboard', type=str2bool, default=False)
 
     # Directories.
