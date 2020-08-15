@@ -103,7 +103,7 @@ def generateSample(size):
         node = [x, y, e, p]
         pointList.append(node)
 
-    # drawResult(pointList, edges, size)
+    drawResult(pointList, edges, size)
     return pointList
 
 def drawOrigin(edges, nodes):
@@ -145,8 +145,9 @@ def drawResult(pointList, edges, size):
     drawMST(edgesMST)
     plt.scatter(apointlist[0,0], apointlist[0,1], c='y')
     plt.title('in MST')
-    plt.savefig('res/molganSample' + str(size) + '.png')
-    plt.show()
+    plt.savefig('molganSample' + str(size) + '.png')
+    # plt.savefig('res/molganSample' + str(size) + '.png')
+    # plt.show()
 
 '''
 ============================================================
@@ -159,11 +160,11 @@ df, distributions, sampleLocations = calDatasetInfo()
 ============================================================
 initial the molGAN Solver
 '''
-solver = testCaseGenerator(100000)
+solver = testCaseGenerator(10000)
 times = 0
 
 evalData = []
-for sample in tqdm(range(100)):
+for sample in tqdm(range(20)):
     pointlistFullSize = generateSample(100)
     maxTime = 20
     time = 0

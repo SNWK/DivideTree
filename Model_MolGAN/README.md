@@ -69,9 +69,9 @@ Evaluation:
 tree edit distance:     
 - 20 (which means no nodes same, remove&insert penalty = 20)  
 
-KL-divergency(elevation, prominence):  
-- average: 0.44337702, 0.29986525
-- min: 0.14103942  0.08884087  
+KL-divergency(elevation, prominence): 
+- average: 0.44337702, 0.29986525 
+- min: 0.14103942  0.08884087 
 
 Compare to other methods:  
 ![hmmRnnEval](res/hmm&rnn.png)
@@ -80,9 +80,22 @@ Compare to other methods:
 ## TODO  
 
 1. Reward machine:  
-- connectivity: 1 / number of strong connected subgraphs  
-- bad edges ratio: (all edges - MST edges) / all edges  
+- Connectivity score: 1 / number of strong connected subgraphs  
+- Redundancy score: 1 - |(all edges - MST edges) / all edges|
 
+  no difference...
+
+2. Structure:  
+- generator's structure:  
+    - edge: 32->256->512->1024->20000(100x100x2)  unreasonable
+    - node: 32->256->512->1024->400(100x100x4)  
+
+
+
+
+10000:  
+[53.35294118 20.          0.43599603  0.32547648]  
+[25.         20.          0.13002367  0.10417727]
 
 
 

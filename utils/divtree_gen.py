@@ -199,6 +199,27 @@ def getTreeHMC(peaks):
         result.append([peaks[v], peaks[w]])
     return result
 
+def getMSTLenForReward(peaks):
+    gsample = Graph()
+    pairs = set()
+    for v in range(len(peaks)):
+        for w in range(len(peaks)):
+            if v != w and (v, w) not in pairs and (w, v) not in pairs:
+                pairs.add((v, w))
+                lat1 = peaks[v][1]
+                lon1 = peaks[v][0]
+                lat2 = peaks[w][1]
+                lon2 = peaks[w][0]
+                dist = haversine(lon1, lat1, lon2, lat2)
+                gsample.add_edge(v, w, dist)
+    treesample = minimum_spanning_tree(gsample)
+    result = []
+    for r in treesample:
+        v, w, _ = r
+        result.append([peaks[v], peaks[w]])
+    return len(result)
+
+
 def genDivideTreePredict(peaks):
     gsample = Graph()
     pairs = set()

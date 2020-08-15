@@ -11,7 +11,7 @@ from torchvision.utils import save_image
 from utilsGAN import *
 from models import Generator, Discriminator
 from dataGAN.sparse_molecular_dataset import SparseMolecularDataset
-
+from rewardUtils import calConnectivityReward, calRedundancyReward
 from tqdm import tqdm
 
 class Solver(object):
@@ -78,10 +78,10 @@ class Solver(object):
     def build_model(self):
         """Create a generator and a discriminator."""
         # self.data.vertexes
-        self.G = Generator(self.g_conv_dim, self.z_dim,
+        self.G = Generator(self.g_conv_dim, self.z_dim, # 16
                            100,
-                           self.data.bond_num_types,
-                           self.data.atom_num_types,
+                           self.data.bond_num_types, # edges type 
+                           self.data.atom_num_types, # 4-d vector
                            self.dropout)
         self.D = Discriminator(self.d_conv_dim, self.m_dim, self.b_dim, self.dropout)
         self.V = Discriminator(self.d_conv_dim, self.m_dim, self.b_dim, self.dropout)
@@ -191,6 +191,8 @@ class Solver(object):
     def reward(self, A, X):
         # adjacent matrix
         rr = 1.
+        rr *= calConnectivityReward(A.cpu().detach().numpy())
+        rr *= calRedundancyReward(A.cpu().detach().numpy() , X.cpu().detach().numpy() )
         # for m in ('logp,sas,qed,unique' if self.metric == 'all' else self.metric).split(','):
 
         #     if m == 'np':
@@ -214,7 +216,7 @@ class Solver(object):
         #     else:
         #         raise RuntimeError('{} is not defined as a metric'.format(m))
 
-        return 1. #rr.reshape(-1, 1)
+        return rr.reshape(-1, 1)
 
     def train(self):
 
@@ -238,7 +240,7 @@ class Solver(object):
                 # print('[Valid]', '')
             else:
                 mols, a, x, _, _, _ = self.data.next_train_batch(self.batch_size)
-                z = self.sample_z(self.batch_size) # 16*16
+                z = self.sample_z(self.batch_size) # 2*16
 
             # =================================================================================== #
             #                             1. Preprocess input data                                #
@@ -279,9 +281,7 @@ class Solver(object):
             d_loss = d_loss_fake + d_loss_real + self.lambda_gp * d_loss_gp
             self.reset_grad()
             
-            d_loss.backward()
-            
-            # print(d_loss.grad, d_loss_fake.grad, d_loss_real.grad)
+            d_loss.backward() 
             self.d_optimizer.step()
 
             # Logging.
@@ -303,24 +303,22 @@ class Solver(object):
                 g_loss_fake = - torch.mean(logits_fake)
 
                 # Real Reward
-                rewardR = torch.from_numpy(np.array(self.reward(a, x))).to(self.device)
+                rewardR = torch.from_numpy(self.reward(a, x)).to(self.device)
                 # Fake Reward
                 (edges_hard, nodes_hard) = self.postprocess((edges_logits, nodes_logits), 'hard_gumbel')
                 edges_hard, nodes_hard = torch.max(edges_hard, -1)[1], nodes_hard
                 # mols = [self.data.matrices2mol(n_.data.cpu().numpy(), e_.data.cpu().numpy(), strict=True)
                 #         for e_, n_ in zip(edges_hard, nodes_hard)]
-                # rewardF = torch.from_numpy(self.reward(edges_hat, nodes_logits)).to(self.device)
-                rewardF = rewardR
+                rewardF = torch.from_numpy(self.reward(edges_hard, nodes_hard)).to(self.device)
+                # rewardF = rewardR
                 # Value loss
                 value_logit_real,_ = self.V(a_tensor, None, x_tensor, torch.sigmoid)
                 value_logit_fake,_ = self.V(edges_hat, None, nodes_logits, torch.sigmoid)
-                # g_loss_value = torch.mean((value_logit_real.float() - rewardR.float()) ** 2 + (
-                #                            value_logit_fake.float() - rewardF.float()) ** 2)
-                g_loss_value = torch.mean((value_logit_real.float() ) ** 2 + (
-                                           value_logit_fake.float() ) ** 2)
-                #rl_loss= -value_logit_fake
-                #f_loss = (torch.mean(features_real, 0) - torch.mean(features_fake, 0)) ** 2
-
+                g_loss_value = torch.mean((value_logit_real.float() - rewardR.float()) ** 2 + (
+                                           value_logit_fake.float() - rewardF.float()) ** 2)
+                # g_loss_value = torch.mean((value_logit_real.float() ) ** 2 + (
+                #                            value_logit_fake.float() ) ** 2)
+               
                 # Backward and optimize.
                 g_loss = g_loss_fake + g_loss_value
                 self.reset_grad()
@@ -336,23 +334,18 @@ class Solver(object):
             # =================================================================================== #
 
             # Print out training information.
-            # if (i+1) % self.log_step == 0:
-            #     et = time.time() - start_time
-            #     et = str(datetime.timedelta(seconds=et))[:-7]
-            #     log = "Elapsed [{}], Iteration [{}/{}]".format(et, i+1, self.num_iters)
+            if (i+1) % self.log_step == 0:
+                et = time.time() - start_time
+                et = str(datetime.timedelta(seconds=et))[:-7]
+                log = "Elapsed [{}], Iteration [{}/{}]".format(et, i+1, self.num_iters)
 
-            #     # Log update
-            #     m0, m1 = 1., 1.#all_scores(mols, self.data, norm=True)     # 'mols' is output of Fake Reward
-            #     m0 = {k: np.array(v)[np.nonzero(v)].mean() for k, v in m0.items()}
-            #     m0.update(m1)
-            #     loss.update(m0)
-            #     for tag, value in loss.items():
-            #         log += ", {}: {:.4f}".format(tag, value)
-            #     print(log)
+                for tag, value in loss.items():
+                    log += ", {}: {:.4f}".format(tag, value)
+                print(log)
 
-            #     if self.use_tensorboard:
-            #         for tag, value in loss.items():
-            #             self.logger.scalar_summary(tag, value, i+1)
+                if self.use_tensorboard:
+                    for tag, value in loss.items():
+                        self.logger.scalar_summary(tag, value, i+1)
 
             # Save model checkpoints.
             if (i+1) % self.model_save_step == 0:
