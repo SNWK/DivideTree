@@ -28,7 +28,7 @@ from solver import Solver
 from torch.autograd import Variable
 import torch
 
-np.random.seed(42)
+# np.random.seed(42)
 
 def calDatasetInfo():
     promEpsilon   = 30   # m,  minimum prominence threshold in the analysis
@@ -87,7 +87,7 @@ def generateSample(size):
     z = Variable(torch.from_numpy(z)).to(solver.device).float()
     # Z-to-target
     edges_logits, nodes_logits = solver.G(z)
-    (edges_hat, nodes_hat) = solver.postprocess((edges_logits, nodes_logits), solver.post_method)
+    (edges_hat) = solver.postprocess((edges_logits), solver.post_method)
     A = torch.max(edges_hat, -1)[1]
     # print(A.data.cpu().numpy())
     # print(nodes_logits.data.cpu().numpy())
@@ -146,8 +146,9 @@ def drawResult(pointList, edges, size):
     plt.scatter(apointlist[0,0], apointlist[0,1], c='y')
     plt.title('in MST')
     plt.savefig('molganSample' + str(size) + '.png')
-    # plt.savefig('res/molganSample' + str(size) + '.png')
+    plt.savefig('res/molganSample' + str(size) + '.png')
     # plt.show()
+    plt.clf()
 
 '''
 ============================================================
@@ -162,11 +163,11 @@ initial the molGAN Solver
 '''
 solver = testCaseGenerator(10000)
 times = 0
-
+# generateSample(40)
 evalData = []
-for sample in tqdm(range(20)):
-    pointlistFullSize = generateSample(100)
-    maxTime = 20
+for sample in tqdm(range(1)):
+    pointlistFullSize = generateSample(40)
+    maxTime = 40
     time = 0
     # choose one realtree as tree A
     for di,diskCenter in enumerate(sampleLocations):
@@ -174,7 +175,7 @@ for sample in tqdm(range(20)):
             break
         # tree A
         peaks = filterPeaksHaversineDist(df, diskCenter, diskRadius)
-        if len(peaks) not in range(20, 100):
+        if len(peaks) not in range(20, 40):
             continue
         else:
             time += 1

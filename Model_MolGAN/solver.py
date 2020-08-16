@@ -153,7 +153,10 @@ class Solver(object):
     def label2onehot(self, labels, dim):
         """Convert label indices to one-hot vectors."""
         out = torch.zeros(list(labels.size())+[dim]).to(self.device)
-        out.scatter_(len(out.size())-1,labels.unsqueeze(-1),1.)
+        out.scatter_( len(out.size())-1, labels.unsqueeze(-1), 1.)
+        # scatter_(input, dim, index, src) 将src中数据根据index中的索引按照dim的方向填进input
+        # len(out.size())-1 = 3
+        # labels.unsqueeze(-1): 0->1,0, 1->0,1
         return out
 
     def classification_loss(self, logit, target, dataset='CelebA'):
@@ -186,13 +189,14 @@ class Solver(object):
             softmax = [F.softmax(e_logits / temperature, -1)
                        for e_logits in listify(inputs)]
 
-        return [delistify(e) for e in (softmax)]
+
+        return delistify([delistify(e) for e in (softmax)])
 
     def reward(self, A, X):
         # adjacent matrix
         rr = 1.
-        rr *= calConnectivityReward(A.cpu().detach().numpy())
-        rr *= calRedundancyReward(A.cpu().detach().numpy() , X.cpu().detach().numpy() )
+        rr *= calConnectivityReward(A.cpu().detach().numpy().copy())
+        rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
         # for m in ('logp,sas,qed,unique' if self.metric == 'all' else self.metric).split(','):
 
         #     if m == 'np':
@@ -263,7 +267,7 @@ class Solver(object):
             # Compute loss with fake images.
             edges_logits, nodes_logits = self.G(z)
             # Postprocess with Gumbel softmax
-            (edges_hat, nodes_hat) = self.postprocess((edges_logits, nodes_logits), self.post_method)
+            (edges_hat) = self.postprocess((edges_logits), self.post_method)
             # nodes_hat = nodes_logits
             logits_fake, features_fake = self.D(edges_hat, None, nodes_logits)
             d_loss_fake = torch.mean(logits_fake)
@@ -298,15 +302,15 @@ class Solver(object):
                 # Z-to-target
                 edges_logits, nodes_logits = self.G(z)
                 # Postprocess with Gumbel softmax
-                (edges_hat, nodes_hat) = self.postprocess((edges_logits, nodes_logits), self.post_method)
+                (edges_hat) = self.postprocess((edges_logits), self.post_method)
                 logits_fake, features_fake = self.D(edges_hat, None, nodes_logits)
                 g_loss_fake = - torch.mean(logits_fake)
 
                 # Real Reward
                 rewardR = torch.from_numpy(self.reward(a, x)).to(self.device)
                 # Fake Reward
-                (edges_hard, nodes_hard) = self.postprocess((edges_logits, nodes_logits), 'hard_gumbel')
-                edges_hard, nodes_hard = torch.max(edges_hard, -1)[1], nodes_hard
+                (edges_hard) = self.postprocess((edges_logits), self.post_method)
+                edges_hard, nodes_hard = torch.max(edges_hard, -1)[1], nodes_logits
                 # mols = [self.data.matrices2mol(n_.data.cpu().numpy(), e_.data.cpu().numpy(), strict=True)
                 #         for e_, n_ in zip(edges_hard, nodes_hard)]
                 rewardF = torch.from_numpy(self.reward(edges_hard, nodes_hard)).to(self.device)

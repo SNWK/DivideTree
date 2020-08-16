@@ -91,11 +91,25 @@ Compare to other methods:
     - node: 32->256->512->1024->400(100x100x4)  
 
 
+predictLen, tree edit distance, elevation kl distance, prominence kl distance
 
-
-10000:  
+Add layer:  [4096], I think we need a bigger one but gpu memory exceeds
+- 10000:  
 [53.35294118 20.          0.43599603  0.32547648]  
 [25.         20.          0.13002367  0.10417727]
+
+Postprocess bug:  hard->soft: A BUG
+- 50000:  
+[53.35294118 20.          0.44846591  0.26389311]  
+[25.         20.          0.13553155  0.09384721]
+
+delete the postprocess of nodes, not a probability distribution:  
+- 4000:  
+[53.35294118 20.          0.47656859  0.2633292 ]  
+[25.         20.          0.17187368  0.06288236]
+
+
+
 
 
 

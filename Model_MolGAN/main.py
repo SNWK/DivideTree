@@ -46,11 +46,11 @@ if __name__ == '__main__':
     parser.add_argument('--post_method', type=str, default='soft_gumbel', choices=['softmax', 'soft_gumbel', 'hard_gumbel'])
 
     # Training configuration.
-    parser.add_argument('--batch_size', type=int, default=2, help='mini-batch size')
-    parser.add_argument('--num_iters', type=int, default=10000, help='number of total iterations for training D')
+    parser.add_argument('--batch_size', type=int, default=4, help='mini-batch size')
+    parser.add_argument('--num_iters', type=int, default=100000, help='number of total iterations for training D')
     parser.add_argument('--num_iters_decay', type=int, default=1000, help='number of iterations for decaying lr')
-    parser.add_argument('--g_lr', type=float, default=0.000001, help='learning rate for G')
-    parser.add_argument('--d_lr', type=float, default=0.000001, help='learning rate for D')
+    parser.add_argument('--g_lr', type=float, default=0.00001, help='learning rate for G')
+    parser.add_argument('--d_lr', type=float, default=0.00001, help='learning rate for D')
     parser.add_argument('--dropout', type=float, default=0., help='dropout rate')
     parser.add_argument('--n_critic', type=int, default=3, help='number of D updates per each G update')
     parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for Adam optimizer')
@@ -58,11 +58,11 @@ if __name__ == '__main__':
     parser.add_argument('--resume_iters', type=int, default=None, help='resume training from this step')
 
     # Test configuration.
-    parser.add_argument('--test_iters', type=int, default=10000, help='test model from this step')
+    parser.add_argument('--test_iters', type=int, default=4000, help='test model from this step')
 
     # Miscellaneous.
     parser.add_argument('--num_workers', type=int, default=2)
-    parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
+    parser.add_argument('--mode', type=str, default='test', choices=['train', 'test'])
     parser.add_argument('--use_tensorboard', type=str2bool, default=False)
 
     # Directories.
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     # Step size.
     parser.add_argument('--log_step', type=int, default=10)
-    parser.add_argument('--sample_step', type=int, default=1000)
+    parser.add_argument('--sample_step', type=int, default=10000)
     parser.add_argument('--model_save_step', type=int, default=1000)
     parser.add_argument('--lr_update_step', type=int, default=1000)
 
