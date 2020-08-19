@@ -79,7 +79,7 @@ class Solver(object):
         """Create a generator and a discriminator."""
         # self.data.vertexes
         self.G = Generator(self.g_conv_dim, self.z_dim, # 16
-                           100,
+                           20,
                            self.data.bond_num_types, # edges type 
                            self.data.atom_num_types, # 4-d vector
                            self.dropout)
@@ -193,10 +193,46 @@ class Solver(object):
         return delistify([delistify(e) for e in (softmax)])
 
     def reward(self, A, X):
+        def calTreeReward(A, X):
+            rr = 1.
+
+            # the edge number should be vNum - 1
+            traceSum = np.trace(A)
+            edgeNum = (np.sum(A)-traceSum)/ 2
+            treeEdgeNum = len(X) - 1
+            if edgeNum != 0:
+                rr *= 1 - abs((edgeNum - treeEdgeNum)/edgeNum)
+            else: 
+                rr = 0.
+
+            # all values at A's diagonal line should be zero
+            rr *= 1 - abs(traceSum/len(X))
+
+            # each node should have at least one edge 
+            A_fill = A.copy()
+            np.fill_diagonal(A_fill, 0)
+            rowSum = np.sum(A_fill, 1)
+            noedgeNum = np.sum(rowSum == 0)
+            rr *= 1 - abs(noedgeNum/len(X))
+
+            return rr
+
+        def getTreeReward(A, X):
+            reward = []
+            for i in range(len(A)):
+                reward.append(calTreeReward(A[i], X[i]))
+            return np.array(reward)
+
         # adjacent matrix
         rr = 1.
-        rr *= calConnectivityReward(A.cpu().detach().numpy().copy())
-        rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
+        A_copy = A.cpu().detach().numpy().copy()
+        X_copy = X.cpu().detach().numpy().copy()
+
+        rr *= getTreeReward(A_copy, X_copy)
+
+        # rr *= calConnectivityReward(A.cpu().detach().numpy().copy())
+        # rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
+
         # for m in ('logp,sas,qed,unique' if self.metric == 'all' else self.metric).split(','):
 
         #     if m == 'np':

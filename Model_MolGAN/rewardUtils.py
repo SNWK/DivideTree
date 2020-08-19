@@ -30,7 +30,7 @@ def calConnectivityReward(A):
 
 def calRedundancyRatio(A, X):
     allLen = np.sum(A)
-    mstLen = getMSTLenForReward(X)
+    mstLen = len(X) - 1 # getMSTLenForReward(X)
     if allLen != 0:
         return 1 - abs((allLen - mstLen)/allLen)
     else:

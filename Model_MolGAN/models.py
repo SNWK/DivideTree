@@ -37,7 +37,7 @@ class Generator(nn.Module):
         self.layers = nn.Sequential(*layers)
 
         ######## update:  for map to 20000
-        newdims = [4096] 
+        newdims = [2048] 
         newlayers = []
         for c0, c1 in zip([conv_dims[-1]]+newdims[:-1], newdims):
             newlayers.append(nn.Linear(c0, c1))

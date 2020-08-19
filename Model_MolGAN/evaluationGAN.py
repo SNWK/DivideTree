@@ -28,7 +28,7 @@ from solver import Solver
 from torch.autograd import Variable
 import torch
 
-# np.random.seed(42)
+np.random.seed(42)
 
 def calDatasetInfo():
     promEpsilon   = 30   # m,  minimum prominence threshold in the analysis
@@ -82,16 +82,16 @@ def kldistance(distribution, synthesisValues):
         distance += phSynth[i]*(math.log(phSynth[i]) - math.log(phNorm[i]))
     return distance
 
-def generateSample(size):
+def generateSample(size, draw=True):
     z = solver.sample_z(1)
     z = Variable(torch.from_numpy(z)).to(solver.device).float()
     # Z-to-target
     edges_logits, nodes_logits = solver.G(z)
     (edges_hat) = solver.postprocess((edges_logits), solver.post_method)
     A = torch.max(edges_hat, -1)[1]
-    # print(A.data.cpu().numpy())
     # print(nodes_logits.data.cpu().numpy())
     edges = A.data.cpu().numpy()
+    edgeNums = np.sum(edges)/2.
     nodes = nodes_logits.data.cpu().numpy()[0]
     pointList = []
     emin, emax, pmin, pmax = 570, 22099, 101, 9065
@@ -103,8 +103,8 @@ def generateSample(size):
         node = [x, y, e, p]
         pointList.append(node)
 
-    drawResult(pointList, edges, size)
-    return pointList
+    if draw: drawResult(pointList, edges, size)
+    return pointList, edgeNums
 
 def drawOrigin(edges, nodes):
     X = []
@@ -138,7 +138,7 @@ def drawResult(pointList, edges, size):
     plt.scatter(apointlist[:,0], apointlist[:,1])
     drawOrigin(edges, apointlist)
     plt.scatter(apointlist[0,0], apointlist[0,1], c='y')
-    plt.title('in Prediction Order')
+    plt.title('generated graph')
     # in MST
     plt.subplot(122)
     plt.scatter(apointlist[:,0], apointlist[:,1])
@@ -161,42 +161,54 @@ df, distributions, sampleLocations = calDatasetInfo()
 ============================================================
 initial the molGAN Solver
 '''
-solver = testCaseGenerator(10000)
-times = 0
-# generateSample(40)
-evalData = []
-for sample in tqdm(range(1)):
-    pointlistFullSize = generateSample(40)
-    maxTime = 40
-    time = 0
-    # choose one realtree as tree A
-    for di,diskCenter in enumerate(sampleLocations):
-        if time > maxTime:
-            break
-        # tree A
-        peaks = filterPeaksHaversineDist(df, diskCenter, diskRadius)
-        if len(peaks) not in range(20, 40):
-            continue
-        else:
-            time += 1
-        rootNode = genDivideTree(peaks)
-        A = buildTree(rootNode)
-        # tree B
-        predictLen = len(peaks)
-        pointlist = pointlistFullSize[:predictLen] 
-        broot = genDivideTreePredict(pointlist)
-        B = buildTree(broot)
-        # tree edit distance
-        dist = getDistance(A,B) / predictLen
-        # kl distance
-        apointlist = np.array(pointlist)
-        elepre = [feet2m(apointlist[i][2]) for i in range(predictLen)]
-        propre = [feet2m(apointlist[i][3]) for i in range(predictLen)]
-        ekldist = kldistance(distributions['elevation'], np.array(elepre))
-        pkldist = kldistance(distributions['prominence'], np.array(propre))
-        # print(predictLen, dist, ekldist, pkldist)
-        evalData.append([predictLen, dist, ekldist, pkldist])
+solver = testCaseGenerator(110000)
 
-evalDataNp = np.array(evalData)
-print(evalDataNp.mean(0))
-print(evalDataNp.min(0))
+def calEdgeNum():
+    totalNums = 0
+    times = 100
+    for i in tqdm(range(times)):
+        _, edgeNums = generateSample(15, draw=True)
+        totalNums += edgeNums
+    print(totalNums / times)
+
+def calDistance():
+    times = 0
+    # generateSample(40)
+    evalData = []
+    for sample in tqdm(range(1)):
+        pointlistFullSize, _ = generateSample(15)
+        maxTime = 300
+        time = 0
+        # choose one realtree as tree A
+        for di,diskCenter in enumerate(sampleLocations):
+            if time > maxTime:
+                break
+            # tree A
+            peaks = filterPeaksHaversineDist(df, diskCenter, diskRadius)
+            if len(peaks) not in range(5, 15):
+                continue
+            else:
+                time += 1
+            rootNode = genDivideTree(peaks)
+            A = buildTree(rootNode)
+            # tree B
+            predictLen = len(peaks)
+            pointlist = pointlistFullSize[:predictLen] 
+            broot = genDivideTreePredict(pointlist)
+            B = buildTree(broot)
+            # tree edit distance
+            dist = getDistance(A,B) / predictLen
+            # kl distance
+            apointlist = np.array(pointlist)
+            elepre = [feet2m(apointlist[i][2]) for i in range(predictLen)]
+            propre = [feet2m(apointlist[i][3]) for i in range(predictLen)]
+            ekldist = kldistance(distributions['elevation'], np.array(elepre))
+            pkldist = kldistance(distributions['prominence'], np.array(propre))
+            # print(predictLen, dist, ekldist, pkldist)
+            evalData.append([predictLen, dist, ekldist, pkldist])
+
+        evalDataNp = np.array(evalData)
+    print(evalDataNp.mean(0))
+    print(evalDataNp.min(0))
+
+calEdgeNum()

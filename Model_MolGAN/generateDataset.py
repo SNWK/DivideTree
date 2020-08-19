@@ -40,10 +40,12 @@ filon = np.logical_and(df['longitude'] > filterCoords[1] - filterHWidth[1],
                        df['longitude'] < filterCoords[1] + filterHWidth[1])
 df = df[np.logical_and(filat, filon)]
 
-diskRadius = 15 # 626 in (20,100)
+diskRadius = 8 # 626 in (20,100)
 
 good = 0
 bad = 0
+
+sta = 0
 
 for region in regionShapes:
     st = time.time()
@@ -66,12 +68,13 @@ for region in regionShapes:
         # filter peaks in disk using haversine distance
         peaks = filterPeaksHaversineDist(df, diskCenter, diskRadius)
         
-        if peaks.shape[0] < 20 or peaks.shape[0] > 100:
+        if peaks.shape[0] < 5 or peaks.shape[0] > 20:
             continue
         good += 1
+        sta += peaks.shape[0]
         L, A, X = genDataMolGAN(peaks)
         allTrees.append([L, A, X])
-    with open('dataGAN/data.pkl', 'wb') as f:
+    with open('dataGAN/data20.pkl', 'wb') as f:
         pickle.dump(allTrees, f, pickle.HIGHEST_PROTOCOL)
 
-print(good)
+print(good, sta/good)
