@@ -89,6 +89,7 @@ def generateSample(size, draw=True):
     edges_logits, nodes_logits = solver.G(z)
     (edges_hat) = solver.postprocess((edges_logits), solver.post_method)
     A = torch.max(edges_hat, -1)[1]
+    rewardR = solver.evaluationReward(A, nodes_logits)[0][0]
     # print(nodes_logits.data.cpu().numpy())
     edges = A.data.cpu().numpy()
     edgeNums = np.sum(edges)/2.
@@ -104,7 +105,7 @@ def generateSample(size, draw=True):
         pointList.append(node)
 
     if draw: drawResult(pointList, edges, size)
-    return pointList, edgeNums
+    return pointList, rewardR
 
 def drawOrigin(edges, nodes):
     X = []
@@ -163,12 +164,14 @@ initial the molGAN Solver
 '''
 solver = testCaseGenerator(110000)
 
-def calEdgeNum():
+def calEdgeNum(iter):
     totalNums = 0
     times = 100
+    solver = testCaseGenerator(iter)
     for i in tqdm(range(times)):
         _, edgeNums = generateSample(15, draw=True)
         totalNums += edgeNums
+        time.sleep(1)
     print(totalNums / times)
 
 def calDistance():
@@ -211,4 +214,25 @@ def calDistance():
     print(evalDataNp.mean(0))
     print(evalDataNp.min(0))
 
-calEdgeNum()
+# calEdgeNum()
+def compareIteration():
+    maxIteration = 0
+    maxReward = 0
+    times = 100
+    for i in range(1, 21):
+        solver = testCaseGenerator(i*10000)
+        totalReward = 0
+        for j in range(times):
+            _, reward = generateSample(15, draw=False)
+            totalReward += reward
+        aveReward = totalReward/times
+        if aveReward >= maxReward:
+            maxReward = aveReward
+            maxIteration = i
+        print("Iteration: ", i*10000, "   Average Reward: ", aveReward)
+        # time.sleep(1)
+    # print(totalNums / times)
+    print("Max Iteration: ", maxIteration*10000, "   max Reward: ", maxReward)
+
+# compareIteration()
+calEdgeNum(170000)

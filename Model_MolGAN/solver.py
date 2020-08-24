@@ -11,7 +11,7 @@ from torchvision.utils import save_image
 from utilsGAN import *
 from models import Generator, Discriminator
 from dataGAN.sparse_molecular_dataset import SparseMolecularDataset
-from rewardUtils import calConnectivityReward, calRedundancyReward
+from rewardUtils import calConnectivityReward, calRedundancyReward, evaCalConnectivityReward
 from tqdm import tqdm
 
 class Solver(object):
@@ -200,21 +200,24 @@ class Solver(object):
             traceSum = np.trace(A)
             edgeNum = (np.sum(A)-traceSum)/ 2
             treeEdgeNum = len(X) - 1
-            if edgeNum != 0:
-                rr *= 1 - abs((edgeNum - treeEdgeNum)/edgeNum)
-            else: 
+            if edgeNum == treeEdgeNum:
+                rr = 1.
+            else:
                 rr = 0.
+            # if edgeNum != 0:
+            #     rr *= 1 - abs((edgeNum - treeEdgeNum)/edgeNum)
+            # else: 
+            #     rr = 0.
 
-            # all values at A's diagonal line should be zero
-            rr *= 1 - abs(traceSum/len(X))
+            # # all values at A's diagonal line should be zero
+            # rr *= 1 - abs(traceSum/len(X))
 
-            # each node should have at least one edge 
-            A_fill = A.copy()
-            np.fill_diagonal(A_fill, 0)
-            rowSum = np.sum(A_fill, 1)
-            noedgeNum = np.sum(rowSum == 0)
-            rr *= 1 - abs(noedgeNum/len(X))
-
+            # # each node should have at least one edge 
+            # A_fill = A.copy()
+            # np.fill_diagonal(A_fill, 0)
+            # rowSum = np.sum(A_fill, 1)
+            # noedgeNum = np.sum(rowSum == 0)
+            # rr *= 1 - abs(noedgeNum/len(X))
             return rr
 
         def getTreeReward(A, X):
@@ -224,38 +227,50 @@ class Solver(object):
             return np.array(reward)
 
         # adjacent matrix
-        rr = 1.
+        rr = 0.
         A_copy = A.cpu().detach().numpy().copy()
         X_copy = X.cpu().detach().numpy().copy()
+        
+        if A_copy.ndim == 2:
+            A_copy = [A_copy]
 
-        rr *= getTreeReward(A_copy, X_copy)
+        rr += 0.3*getTreeReward(A_copy, X_copy)
 
-        # rr *= calConnectivityReward(A.cpu().detach().numpy().copy())
+        rr += 0.7*calConnectivityReward(A_copy)
         # rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
+        return rr.reshape(-1, 1)
 
-        # for m in ('logp,sas,qed,unique' if self.metric == 'all' else self.metric).split(','):
+    def evaluationReward(self, A, X):
+        def calTreeReward(A, X):
+            rr = 1.
+            # the edge number should be vNum - 1
+            traceSum = np.trace(A)
+            edgeNum = (np.sum(A)-traceSum)/ 2
+            treeEdgeNum = len(X) - 1
+            if edgeNum != 0:
+                rr *= 1 - abs((edgeNum - treeEdgeNum)/edgeNum)
+            else: 
+                rr = 0.
+            return rr
 
-        #     if m == 'np':
-        #         rr *= MolecularMetrics.natural_product_scores(mols, norm=True)
-        #     elif m == 'logp':
-        #         rr *= MolecularMetrics.water_octanol_partition_coefficient_scores(mols, norm=True)
-        #     elif m == 'sas':
-        #         rr *= MolecularMetrics.synthetic_accessibility_score_scores(mols, norm=True)
-        #     elif m == 'qed':
-        #         rr *= MolecularMetrics.quantitative_estimation_druglikeness_scores(mols, norm=True)
-        #     elif m == 'novelty':
-        #         rr *= MolecularMetrics.novel_scores(mols, data)
-        #     elif m == 'dc':
-        #         rr *= MolecularMetrics.drugcandidate_scores(mols, data)
-        #     elif m == 'unique':
-        #         rr *= MolecularMetrics.unique_scores(mols)
-        #     elif m == 'diversity':
-        #         rr *= MolecularMetrics.diversity_scores(mols, data)
-        #     elif m == 'validity':
-        #         rr *= MolecularMetrics.valid_scores(mols)
-        #     else:
-        #         raise RuntimeError('{} is not defined as a metric'.format(m))
+        def getTreeReward(A, X):
+            reward = []
+            for i in range(len(A)):
+                reward.append(calTreeReward(A[i], X[i]))
+            return np.array(reward)
 
+            # adjacent matrix
+        rr = 0.
+        A_copy = A.cpu().detach().numpy().copy()
+        X_copy = X.cpu().detach().numpy().copy()
+            
+        if A_copy.ndim == 2:
+            A_copy = [A_copy]
+
+        rr += 0.5*getTreeReward(A_copy, X_copy)
+
+        rr += 0.5*evaCalConnectivityReward(A_copy)
+            # rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
         return rr.reshape(-1, 1)
 
     def train(self):

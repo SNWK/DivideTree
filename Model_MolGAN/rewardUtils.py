@@ -17,10 +17,10 @@ def calConnectivityRatio(A):
     difGroups = set()
     for value in groups.values():
         difGroups.add(value)
-    if len(difGroups) != 0:
-        return 1. / len(difGroups)
-    else:
+    if len(difGroups) == 1:
         return 1.
+    else:
+        return 0.
 
 def calConnectivityReward(A):
     reward = []
@@ -28,6 +28,29 @@ def calConnectivityReward(A):
         reward.append(calConnectivityRatio(A[i]))
     return np.array(reward)
 
+def evaConnectivityRatio(A):
+    G = dict()
+    for i in range(len(A)):
+        G[i] = []
+        for j in range(len(A[i])):
+            if A[i][j] == 1:
+                G[i].append(j)
+    groups = tc(G)
+    groups:dict
+    difGroups = set()
+    for value in groups.values():
+        difGroups.add(value)
+    if len(difGroups) != 0:
+        return 1./len(difGroups)
+    else:
+        return 0.
+
+def evaCalConnectivityReward(A):
+    reward = []
+    for i in range(len(A)):
+        reward.append(evaConnectivityRatio(A[i]))
+    return np.array(reward)
+    
 def calRedundancyRatio(A, X):
     allLen = np.sum(A)
     mstLen = len(X) - 1 # getMSTLenForReward(X)
