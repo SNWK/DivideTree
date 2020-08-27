@@ -105,7 +105,7 @@ def generateSample(size, draw=True):
         pointList.append(node)
 
     if draw: drawResult(pointList, edges, size)
-    return pointList, rewardR
+    return pointList, edgeNums, rewardR
 
 def drawOrigin(edges, nodes):
     X = []
@@ -162,24 +162,28 @@ df, distributions, sampleLocations = calDatasetInfo()
 ============================================================
 initial the molGAN Solver
 ''' 
-solver = testCaseGenerator(110000)
+solver = testCaseGenerator(90000)
 
 def calEdgeNum(iter):
     totalNums = 0
+    totalRewards = 0
     times = 100
     solver = testCaseGenerator(iter)
     for i in tqdm(range(times)):
-        _, edgeNums = generateSample(15, draw=True)
+        _, edgeNums, r = generateSample(20, draw=False)
         totalNums += edgeNums
+        totalRewards += r
         time.sleep(1)
-    print(totalNums / times)
+    print("Avg edgeNums: ", totalNums / times)
+    print("Avg rewards: ", totalRewards / times)
 
-def calDistance():
+def calDistance(iter):
+    solver = testCaseGenerator(iter)
     times = 0
     # generateSample(40)
     evalData = []
-    for sample in tqdm(range(1)):
-        pointlistFullSize, _ = generateSample(15)
+    for sample in tqdm(range(50)):
+        pointlistFullSize, _, _ = generateSample(20)
         maxTime = 300
         time = 0
         # choose one realtree as tree A
@@ -188,7 +192,7 @@ def calDistance():
                 break
             # tree A
             peaks = filterPeaksHaversineDist(df, diskCenter, diskRadius)
-            if len(peaks) not in range(5, 15):
+            if len(peaks) not in range(10, 20):
                 continue
             else:
                 time += 1
@@ -223,7 +227,7 @@ def compareIteration():
         solver = testCaseGenerator(i*10000)
         totalReward = 0
         for j in range(times):
-            _, reward = generateSample(15, draw=False)
+            _, reward, _ = generateSample(15, draw=False)
             totalReward += reward
         aveReward = totalReward/times
         if aveReward >= maxReward:
@@ -235,4 +239,5 @@ def compareIteration():
     print("Max Iteration: ", maxIteration*10000, "   max Reward: ", maxReward)
 
 # compareIteration()
-calEdgeNum(170000)
+calEdgeNum(90000)
+# calDistance(90000)

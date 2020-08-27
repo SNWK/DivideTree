@@ -200,14 +200,14 @@ class Solver(object):
             traceSum = np.trace(A)
             edgeNum = (np.sum(A)-traceSum)/ 2
             treeEdgeNum = len(X) - 1
-            if edgeNum == treeEdgeNum:
-                rr = 1.
-            else:
-                rr = 0.
-            # if edgeNum != 0:
-            #     rr *= 1 - abs((edgeNum - treeEdgeNum)/edgeNum)
-            # else: 
+            # if edgeNum == treeEdgeNum:
+            #     rr = 1.
+            # else:
             #     rr = 0.
+            if edgeNum != 0:
+                rr *= 1 - ((edgeNum - treeEdgeNum)/edgeNum)**2
+            else: 
+                rr = 0.
 
             # # all values at A's diagonal line should be zero
             # rr *= 1 - abs(traceSum/len(X))
@@ -234,9 +234,9 @@ class Solver(object):
         if A_copy.ndim == 2:
             A_copy = [A_copy]
 
-        rr += 0.3*getTreeReward(A_copy, X_copy)
+        rr += 0.5*getTreeReward(A_copy, X_copy)
 
-        rr += 0.7*calConnectivityReward(A_copy)
+        rr += 0.5*calConnectivityReward(A_copy)
         # rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
         return rr.reshape(-1, 1)
 
