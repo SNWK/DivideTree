@@ -13,10 +13,19 @@ python generateDataset.py
 python dataGAN/sparse_molecular_dataset.py
 ```
 
-train or test:  
+train:  
 ```
 python main.py
-```
+```  
+
+test:  
+```  
+python evaluationGAN.py   
+Change iteration: solver = testCaseGenerator(iteration)  
+Cal KL-distance: calDistance()  
+Compare iteration: compareIteration()  
+Cal average EdgeNum: calEdgeNum(170000)  
+```  
 
 ## Experiment  
 

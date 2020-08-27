@@ -161,7 +161,7 @@ df, distributions, sampleLocations = calDatasetInfo()
 '''
 ============================================================
 initial the molGAN Solver
-'''
+''' 
 solver = testCaseGenerator(110000)
 
 def calEdgeNum(iter):

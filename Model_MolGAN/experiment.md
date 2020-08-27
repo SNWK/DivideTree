@@ -24,9 +24,9 @@ best iteration: 120000
 
 average reward: 0.28
 
-![image-20200823235541958](experiment.assets/image-20200823235541958.png)
-
 ![image-20200823235701036](experiment.assets/image-20200823235701036.png)
+
+![image-20200823235541958](experiment.assets/image-20200823235541958.png)
 
 ## 0.7 0.3 discrete
 
@@ -44,7 +44,7 @@ average reward: 0.20
 
 
 
-## 0.7 0.3 continuous
+## 0.7 0.3 continuousquarantine
 
 train: 0.7 x tree Reward(continuous) + 0.3 x connectivity Reward(continuous)
 
