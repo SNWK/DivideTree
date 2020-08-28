@@ -50,7 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_iters', type=int, default=200000, help='number of total iterations for training D')
     parser.add_argument('--num_iters_decay', type=int, default=1000, help='number of iterations for decaying lr')
     parser.add_argument('--g_lr', type=float, default=0.0001, help='learning rate for G')
-    parser.add_argument('--d_lr', type=float, default=0.0001, help='learning rate for D')
+    parser.add_argument('--d_lr', type=float, default=0.00001, help='learning rate for D')
     parser.add_argument('--dropout', type=float, default=0.0, help='dropout rate')
     parser.add_argument('--n_critic', type=int, default=3, help='number of D updates per each G update')
     parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for Adam optimizer')
@@ -73,10 +73,10 @@ if __name__ == '__main__':
     parser.add_argument('--result_dir', type=str, default='molgan/results')
 
     # Step size.
-    parser.add_argument('--log_step', type=int, default=10)
+    parser.add_argument('--log_step', type=int, default=1000)
     parser.add_argument('--sample_step', type=int, default=10000)
     parser.add_argument('--model_save_step', type=int, default=10000)
-    parser.add_argument('--lr_update_step', type=int, default=1000)
+    parser.add_argument('--lr_update_step', type=int, default=3000)
 
     config = parser.parse_args()
     print(config)

@@ -11,7 +11,7 @@ from torchvision.utils import save_image
 from utilsGAN import *
 from models import Generator, Discriminator
 from dataGAN.sparse_molecular_dataset import SparseMolecularDataset
-from rewardUtils import calConnectivityReward, calRedundancyReward, evaCalConnectivityReward
+from rewardUtils import calConnectivityReward, evaCalConnectivityReward
 from tqdm import tqdm
 
 class Solver(object):
@@ -234,9 +234,9 @@ class Solver(object):
         if A_copy.ndim == 2:
             A_copy = [A_copy]
 
-        rr += 0.5*getTreeReward(A_copy, X_copy)
+        rr += 0.9*getTreeReward(A_copy, X_copy)
 
-        rr += 0.5*calConnectivityReward(A_copy)
+        rr += 0.1*evaCalConnectivityReward(A_copy)
         # rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
         return rr.reshape(-1, 1)
 
@@ -248,8 +248,10 @@ class Solver(object):
             edgeNum = (np.sum(A)-traceSum)/ 2
             treeEdgeNum = len(X) - 1
             if edgeNum != 0:
-                rr *= 1 - abs((edgeNum - treeEdgeNum)/edgeNum)
+                rr *= 1 - ((edgeNum - treeEdgeNum)/edgeNum)**2
             else: 
+                rr = 0.
+            if rr < 0:
                 rr = 0.
             return rr
 
@@ -319,6 +321,8 @@ class Solver(object):
             edges_logits, nodes_logits = self.G(z)
             # Postprocess with Gumbel softmax
             (edges_hat) = self.postprocess((edges_logits), self.post_method)
+            # to be symetric
+            edges_hat = (edges_hat + edges_hat.permute(0,2,1,3))/2
             # nodes_hat = nodes_logits
             logits_fake, features_fake = self.D(edges_hat, None, nodes_logits)
             d_loss_fake = torch.mean(logits_fake)
@@ -361,6 +365,7 @@ class Solver(object):
                 rewardR = torch.from_numpy(self.reward(a, x)).to(self.device)
                 # Fake Reward
                 (edges_hard) = self.postprocess((edges_logits), self.post_method)
+                edges_hard = (edges_hard + edges_hard.permute(0,2,1,3))/2
                 edges_hard, nodes_hard = torch.max(edges_hard, -1)[1], nodes_logits
                 # mols = [self.data.matrices2mol(n_.data.cpu().numpy(), e_.data.cpu().numpy(), strict=True)
                 #         for e_, n_ in zip(edges_hard, nodes_hard)]
@@ -414,8 +419,8 @@ class Solver(object):
 
             # Decay learning rates.
             if (i+1) % self.lr_update_step == 0 and (i+1) > (self.num_iters - self.num_iters_decay):
-                g_lr -= (self.g_lr / float(self.num_iters_decay))
-                d_lr -= (self.d_lr / float(self.num_iters_decay))
+                g_lr -= (self.g_lr / 10) #float(self.num_iters_decay))
+                d_lr -= (self.d_lr / 10) #float(self.num_iters_decay))
                 self.update_lr(g_lr, d_lr)
                 print ('Decayed learning rates, g_lr: {}, d_lr: {}.'.format(g_lr, d_lr))
 
@@ -432,6 +437,7 @@ class Solver(object):
             edges_logits, nodes_logits = self.G(z)
             # Postprocess with Gumbel softmax
             (edges_hat, nodes_hat) = self.postprocess((edges_logits, nodes_logits), self.post_method)
+            edges_hat = (edges_hard + edges_hard.permute(0,2,1,3))/2
             A = torch.max(edges_hat, -1)[1]
             # print(A.data.cpu().numpy())
             # print(nodes_logits.data.cpu().numpy())

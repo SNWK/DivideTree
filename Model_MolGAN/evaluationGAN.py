@@ -88,8 +88,9 @@ def generateSample(size, draw=True):
     # Z-to-target
     edges_logits, nodes_logits = solver.G(z)
     (edges_hat) = solver.postprocess((edges_logits), solver.post_method)
+    edges_hat = (edges_hat + edges_hat.permute(1,0,2))/2
     A = torch.max(edges_hat, -1)[1]
-    rewardR = solver.evaluationReward(A, nodes_logits)[0][0]
+    rewardR = solver.reward(A, nodes_logits)[0][0]
     # print(nodes_logits.data.cpu().numpy())
     edges = A.data.cpu().numpy()
     edgeNums = np.sum(edges)/2.
@@ -170,7 +171,7 @@ def calEdgeNum(iter):
     times = 100
     solver = testCaseGenerator(iter)
     for i in tqdm(range(times)):
-        _, edgeNums, r = generateSample(20, draw=False)
+        _, edgeNums, r = generateSample(20, draw=True)
         totalNums += edgeNums
         totalRewards += r
         time.sleep(1)
@@ -227,7 +228,7 @@ def compareIteration():
         solver = testCaseGenerator(i*10000)
         totalReward = 0
         for j in range(times):
-            _, reward, _ = generateSample(15, draw=False)
+            _, _, reward = generateSample(15, draw=False)
             totalReward += reward
         aveReward = totalReward/times
         if aveReward >= maxReward:
@@ -239,5 +240,5 @@ def compareIteration():
     print("Max Iteration: ", maxIteration*10000, "   max Reward: ", maxReward)
 
 # compareIteration()
-calEdgeNum(90000)
-# calDistance(90000)
+calEdgeNum(200000)
+# calDistance(50000)
