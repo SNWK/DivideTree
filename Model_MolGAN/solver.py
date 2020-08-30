@@ -202,9 +202,9 @@ class Solver(object):
         if A_copy.ndim == 2:
             A_copy = [A_copy]
 
-        rr += 0.6*getTreeReward(A_copy, X_copy)
+        rr += 0.5*getTreeReward(A_copy, X_copy)
 
-        rr += 0.4*calConnectivityReward(A_copy)
+        rr += 0.5*calConnectivityReward(A_copy)
 
         return rr.reshape(-1, 1)
 

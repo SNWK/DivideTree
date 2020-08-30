@@ -117,7 +117,7 @@ def testCaseGenerator(test_iters):
     parser.add_argument('--use_tensorboard', type=str2bool, default=False)
 
     # Directories.
-    parser.add_argument('--mol_data_dir', type=str, default='dataGAN/100nodes.sparsedataset')
+    parser.add_argument('--mol_data_dir', type=str, default='dataGAN/20nodesnew.sparsedataset')
     parser.add_argument('--log_dir', type=str, default='molgan/logs')
     parser.add_argument('--model_save_dir', type=str, default='molgan/models')
     parser.add_argument('--sample_dir', type=str, default='molgan/samples')

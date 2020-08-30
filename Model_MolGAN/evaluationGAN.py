@@ -255,8 +255,8 @@ def compareIteration():
 def run():
     maxIteration = compareIteration()
     print("cal avg edgeNUM and rewards ing...")
-    calEdgeNum(maxIteration, True)
+    calEdgeNum(maxIteration*10000, True)
     print("cal avg edgeNUM and rewards ing...")
-    calDistance(maxIteration)
+    calDistance(maxIteration*10000)
 
 run()
