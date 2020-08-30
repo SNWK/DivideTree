@@ -32,7 +32,7 @@ np.random.seed(42)
 
 def calDatasetInfo():
     promEpsilon   = 30   # m,  minimum prominence threshold in the analysis
-    diskRadius    = 90   # km, used for the analysis to normalize histograms 
+    diskRadius    = 8   # km, used for the analysis to normalize histograms 
     globalMaxElev = 9000 # m,  any value larger than any other peak elevation, used internally as initialization and undefineds
     terrainUnitKm  = 90  # km, size of terrain
     km2pixels = 1000/30  # 30 m/pixel
@@ -93,16 +93,18 @@ def generateSample(size, draw=True):
     rewardR = solver.reward(A, nodes_logits)[0][0]
     # print(nodes_logits.data.cpu().numpy())
     edges = A.data.cpu().numpy()
-    edgeNums = np.sum(edges)/2.
+    edgeNums = (np.sum(edges)-np.trace(edges))/2.
     nodes = nodes_logits.data.cpu().numpy()[0]
     pointList = []
-    emin, emax, pmin, pmax = 570, 22099, 101, 9065
+    emin, emax, pmin, pmax, dmin, dmax, imin, imax = 173.73600000000002, 6735.7752, 30.7848, 2763.012, 0.005143981037873821, 0.7036450079239303, 0.050013523578808845, 2207.6431
     for i in range(size):
         x = nodes[i][0]
         y = nodes[i][1]
         e = nodes[i][2] * (emax - emin) + emin
         p = nodes[i][3] * (pmax - pmin) + pmin
-        node = [x, y, e, p]
+        d = nodes[i][4] * (dmin - dmax) + dmin
+        i = nodes[i][5] * (imin - imax) + imin
+        node = [x, y, e, p, d, i]
         pointList.append(node)
 
     if draw: drawResult(pointList, edges, size)
@@ -165,13 +167,13 @@ initial the molGAN Solver
 ''' 
 solver = testCaseGenerator(90000)
 
-def calEdgeNum(iter):
+def calEdgeNum(iter, isDraw):
     totalNums = 0
     totalRewards = 0
     times = 100
     solver = testCaseGenerator(iter)
     for i in tqdm(range(times)):
-        _, edgeNums, r = generateSample(20, draw=True)
+        _, edgeNums, r = generateSample(20, draw=isDraw)
         totalNums += edgeNums
         totalRewards += r
         time.sleep(1)
@@ -208,21 +210,27 @@ def calDistance(iter):
             dist = getDistance(A,B) / predictLen
             # kl distance
             apointlist = np.array(pointlist)
-            elepre = [feet2m(apointlist[i][2]) for i in range(predictLen)]
-            propre = [feet2m(apointlist[i][3]) for i in range(predictLen)]
+            elepre = [apointlist[i][2] for i in range(predictLen)]
+            propre = [apointlist[i][3] for i in range(predictLen)]
+            dompre = [apointlist[i][4] for i in range(predictLen)]
+            isopre = [apointlist[i][5] for i in range(predictLen)]
             ekldist = kldistance(distributions['elevation'], np.array(elepre))
             pkldist = kldistance(distributions['prominence'], np.array(propre))
+            dkldist = kldistance(distributions['dominance'], np.array(dompre))
+            ikldist = kldistance(distributions['isolation'], np.array(isopre))
+
             # print(predictLen, dist, ekldist, pkldist)
-            evalData.append([predictLen, dist, ekldist, pkldist])
+            evalData.append([predictLen, dist, ekldist, pkldist, dkldist, ikldist])
 
         evalDataNp = np.array(evalData)
-    print(evalDataNp.mean(0))
-    print(evalDataNp.min(0))
+    print("predictLen", "treeDist", "ekldist", "pkldist", "dkldist", "ikldist")
+    print("avg: ", evalDataNp.mean(0))
+    print("min: ", evalDataNp.min(0))
 
 # calEdgeNum()
 def compareIteration():
     maxIteration = 0
-    maxReward = 0
+    maxReward = -100
     times = 100
     for i in range(1, 21):
         solver = testCaseGenerator(i*10000)
@@ -238,7 +246,17 @@ def compareIteration():
         # time.sleep(1)
     # print(totalNums / times)
     print("Max Iteration: ", maxIteration*10000, "   max Reward: ", maxReward)
+    return maxIteration
 
 # compareIteration()
-calEdgeNum(200000)
-# calDistance(50000)
+# calEdgeNum(140000, True)
+# calDistance(140000)
+
+def run():
+    maxIteration = compareIteration()
+    print("cal avg edgeNUM and rewards ing...")
+    calEdgeNum(maxIteration, True)
+    print("cal avg edgeNUM and rewards ing...")
+    calDistance(maxIteration)
+
+run()

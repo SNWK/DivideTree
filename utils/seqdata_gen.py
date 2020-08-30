@@ -288,7 +288,7 @@ def genDataMolGAN(peaks):
 
     for v in vertices:
         X.append([peaks['longitude'].loc[v], peaks['latitude'].loc[v], 
-                peaks['elevation in feet'].loc[v], peaks['prominence in feet'].loc[v]])
+                peaks['elev'].loc[v], peaks['prom'].loc[v], peaks['dom'].loc[v], peaks['isolation'].loc[v]])
 
     for edges in treesample:
         v, w, d = edges

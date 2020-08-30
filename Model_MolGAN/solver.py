@@ -11,9 +11,10 @@ from torchvision.utils import save_image
 from utilsGAN import *
 from models import Generator, Discriminator
 from dataGAN.sparse_molecular_dataset import SparseMolecularDataset
-from rewardUtils import calConnectivityReward, evaCalConnectivityReward
+from rewardUtils import calConnectivityReward, getTreeReward
 from tqdm import tqdm
 
+printModel = False
 class Solver(object):
     """Solver for training and testing StarGAN."""
 
@@ -89,8 +90,9 @@ class Solver(object):
         self.g_optimizer = torch.optim.Adam(list(self.G.parameters())+list(self.V.parameters()),
                                             self.g_lr, [self.beta1, self.beta2])
         self.d_optimizer = torch.optim.Adam(self.D.parameters(), self.d_lr, [self.beta1, self.beta2])
-        self.print_network(self.G, 'G')
-        self.print_network(self.D, 'D')
+        if printModel:
+            self.print_network(self.G, 'G')
+            self.print_network(self.D, 'D')
 
         self.G.to(self.device)
         self.D.to(self.device)
@@ -193,40 +195,6 @@ class Solver(object):
         return delistify([delistify(e) for e in (softmax)])
 
     def reward(self, A, X):
-        def calTreeReward(A, X):
-            rr = 1.
-
-            # the edge number should be vNum - 1
-            traceSum = np.trace(A)
-            edgeNum = (np.sum(A)-traceSum)/ 2
-            treeEdgeNum = len(X) - 1
-            # if edgeNum == treeEdgeNum:
-            #     rr = 1.
-            # else:
-            #     rr = 0.
-            if edgeNum != 0:
-                rr *= 1 - ((edgeNum - treeEdgeNum)/edgeNum)**2
-            else: 
-                rr = 0.
-
-            # # all values at A's diagonal line should be zero
-            # rr *= 1 - abs(traceSum/len(X))
-
-            # # each node should have at least one edge 
-            # A_fill = A.copy()
-            # np.fill_diagonal(A_fill, 0)
-            # rowSum = np.sum(A_fill, 1)
-            # noedgeNum = np.sum(rowSum == 0)
-            # rr *= 1 - abs(noedgeNum/len(X))
-            return rr
-
-        def getTreeReward(A, X):
-            reward = []
-            for i in range(len(A)):
-                reward.append(calTreeReward(A[i], X[i]))
-            return np.array(reward)
-
-        # adjacent matrix
         rr = 0.
         A_copy = A.cpu().detach().numpy().copy()
         X_copy = X.cpu().detach().numpy().copy()
@@ -234,45 +202,10 @@ class Solver(object):
         if A_copy.ndim == 2:
             A_copy = [A_copy]
 
-        rr += 0.9*getTreeReward(A_copy, X_copy)
+        rr += 0.6*getTreeReward(A_copy, X_copy)
 
-        rr += 0.1*evaCalConnectivityReward(A_copy)
-        # rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
-        return rr.reshape(-1, 1)
+        rr += 0.4*calConnectivityReward(A_copy)
 
-    def evaluationReward(self, A, X):
-        def calTreeReward(A, X):
-            rr = 1.
-            # the edge number should be vNum - 1
-            traceSum = np.trace(A)
-            edgeNum = (np.sum(A)-traceSum)/ 2
-            treeEdgeNum = len(X) - 1
-            if edgeNum != 0:
-                rr *= 1 - ((edgeNum - treeEdgeNum)/edgeNum)**2
-            else: 
-                rr = 0.
-            if rr < 0:
-                rr = 0.
-            return rr
-
-        def getTreeReward(A, X):
-            reward = []
-            for i in range(len(A)):
-                reward.append(calTreeReward(A[i], X[i]))
-            return np.array(reward)
-
-            # adjacent matrix
-        rr = 0.
-        A_copy = A.cpu().detach().numpy().copy()
-        X_copy = X.cpu().detach().numpy().copy()
-            
-        if A_copy.ndim == 2:
-            A_copy = [A_copy]
-
-        rr += 0.5*getTreeReward(A_copy, X_copy)
-
-        rr += 0.5*evaCalConnectivityReward(A_copy)
-            # rr *= calRedundancyReward(A.cpu().detach().numpy().copy() , X.cpu().detach().numpy().copy() )
         return rr.reshape(-1, 1)
 
     def train(self):

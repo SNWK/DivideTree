@@ -50,7 +50,7 @@ class SparseMolecularDataset():
 
     def _generate_encoders_decoders(self):
         self.log('Creating atoms encoder and decoder..')
-        self.atom_num_types = 4 # feature dimensions
+        self.atom_num_types = 6 # feature dimensions
         self.log('Created atoms encoder and decoder with {} atom types and 1 PAD symbol!'.format(
             self.atom_num_types - 1))
 
@@ -117,7 +117,7 @@ class SparseMolecularDataset():
 
         max_length = max_length if max_length is not None else mol[0]
         X = mol[2]
-        X += [[0, 0, 0, 0] for i in range(max_length - mol[0]) ]
+        X += [[0, 0, 0, 0, 0, 0] for i in range(max_length - mol[0]) ]
         X = np.array(X)
         return np.array(X)
 
@@ -192,7 +192,7 @@ class SparseMolecularDataset():
 if __name__ == '__main__':
     data = SparseMolecularDataset()
     data.generate('dataGAN/data20.pkl')
-    data.save('dataGAN/20nodes.sparsedataset')
+    data.save('dataGAN/20nodesnew.sparsedataset')
 
     # data = SparseMolecularDataset()
     # data.generate('data/qm9_5k.smi', validation=0.00021, test=0.00021)  # , filters=lambda x: x.GetNumAtoms() <= 9)

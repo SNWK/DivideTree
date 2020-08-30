@@ -11,7 +11,7 @@ from tqdm import tqdm
 import time
 import pickle
 from utils.shapefiles import sampleShapefileLocations
-from analysis.peaksdata import filterPeaksHaversineDist
+from analysis.peaksdata import filterPeaksHaversineDist, addExtraColumns
 from utils.divtree_gen import *
 from utils.seqdata_gen import *
 from utils.seq2demodst import *
@@ -33,14 +33,13 @@ filterHWidth = [km2deg(filterRadius), km2deg(filterRadius, filterCoords[0])]
 
 # read peaks file and filter region of interest
 df = pd.read_csv(peaksFile)
-
 filat = np.logical_and(df['latitude']  > filterCoords[0] - filterHWidth[0], 
                        df['latitude'] < filterCoords[0] + filterHWidth[0])
 filon = np.logical_and(df['longitude'] > filterCoords[1] - filterHWidth[1], 
                        df['longitude'] < filterCoords[1] + filterHWidth[1])
 df = df[np.logical_and(filat, filon)]
 
-diskRadius = 8 # 626 in (20,100)
+diskRadius = 8 # 626 in (20,100) 1210 in (10,20)
 
 good = 0
 bad = 0
@@ -54,21 +53,32 @@ for region in regionShapes:
     print(region, ": ", len(sampleLocations), "samples")
     # region peaks DB
     df = pd.read_csv(os.path.join(regionPeaksDir, region.replace('.shp', '.csv')))
-    xmin = df['elevation in feet'].min()
-    xmax = df['elevation in feet'].max()
-    ymin = df['prominence in feet'].min()
-    ymax = df['prominence in feet'].max()
-    df['elevation in feet'] = (df['elevation in feet'] - xmin) / (xmax - xmin)
-    df['prominence in feet'] = (df['prominence in feet'] - ymin) / (ymax - ymin)
-    # 570 22099 101 9065
-    print(xmin, xmax, ymin, ymax)
+    # latitude  longitude  elevation in feet  key saddle latitude  key saddle longitude  prominence in feet  isolation latitude  isolation longitude  isolation in km
+
+    df = addExtraColumns(df)
+    elemin = df['elev'].min()
+    elemax = df['elev'].max()
+    promin = df['prom'].min()
+    promax = df['prom'].max()
+    dommin = df['dom'].min()
+    dommax = df['dom'].max()
+    isomin = df['isolation'].min()
+    isomax = df['isolation'].max()
+
+    # normalizaiton
+    df['elev'] = (df['elev'] - elemin) / (elemax - elemin)
+    df['prom'] = (df['prom'] - promin) / (promax - promin)
+    df['dom'] = (df['dom'] - dommin) / (dommax - dommin)
+    df['isolation'] = (df['isolation'] - isomin) / (isomax - isomin)
+    # 173.73600000000002 6735.7752 30.7848 2763.012 0.005143981037873821 0.7036450079239303 0.050013523578808845 2207.6431
+    print(elemin, elemax, promin, promax, dommin, dommax, isomin, isomax)
     allTrees = []
     # compute sequences
     for di,diskCenter in tqdm(enumerate(sampleLocations)):
         # filter peaks in disk using haversine distance
         peaks = filterPeaksHaversineDist(df, diskCenter, diskRadius)
         
-        if peaks.shape[0] < 5 or peaks.shape[0] > 20:
+        if peaks.shape[0] < 10 or peaks.shape[0] > 20:
             continue
         good += 1
         sta += peaks.shape[0]
