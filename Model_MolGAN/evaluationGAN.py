@@ -30,6 +30,35 @@ import torch
 
 np.random.seed(42)
 
+barColor  = (216/255, 226/255, 238/255, 1.0)
+edgeColor = (137/255, 151/255, 168/255, 1.0)
+
+def printHistogramsDistances(hbins, hReal, hSynth):
+    hdiff = np.abs(hReal - hSynth)
+    print('Max', np.max(hdiff), 'Sum', np.sum(hdiff), 'Avg', np.mean(hdiff))
+    print('EMD', np.diff(hbins)[0]*np.abs(np.cumsum(hReal) - np.cumsum(hSynth)).sum())
+    
+def histogramsComparison(distribution, synthesisValues, pos, fig):
+    hbins  = distribution['bins']
+    hmids  = distribution['x']
+    hReal  = distribution['hist']
+    hSynth = histogramFromBins(synthesisValues, hbins, frequencies=False)
+    hNorm  = np.round(synthesisValues.size * hReal/hReal.sum())
+
+    # fig = plt.figure(figsize=(16, 5))
+    ax = fig.add_subplot(4,2,1 + pos*2)
+    _ = ax.bar (hmids, hSynth, width=np.diff(hbins), color=barColor, edgecolor=edgeColor)
+    _ = ax.plot(hmids, hNorm, color='r')
+
+    ax = fig.add_subplot(4,2,2 + pos*2)
+    _ = ax.bar (hmids, hNorm, width=np.diff(hbins), color='g')
+    _ = ax.plot(hmids, hNorm, color='r')
+    
+    printHistogramsDistances(hbins, hReal/hReal.sum(), hSynth/hSynth.sum())
+    print('Per bin differences (synthesis - target)')
+    print(hSynth - hNorm)
+
+
 def calDatasetInfo():
     promEpsilon   = 30   # m,  minimum prominence threshold in the analysis
     diskRadius    = 8   # km, used for the analysis to normalize histograms 
@@ -64,7 +93,6 @@ def calDatasetInfo():
     diskRadius = 15
     sampleLocations = sampleShapefileLocations(os.path.join(regionShapesDir, 'andes_peru.shp'), diskRadius)
     return df, distributions, sampleLocations
-
 
 def kldistance(distribution, synthesisValues):
     hbins  = distribution['bins']
@@ -154,6 +182,7 @@ def drawResult(pointList, edges, size):
     # plt.show()
     plt.clf()
 
+
 '''
 ============================================================
 initial the terrain area, calculate distributions 
@@ -186,7 +215,7 @@ def calDistance(iter):
     # generateSample(40)
     evalData = []
     for sample in tqdm(range(50)):
-        pointlistFullSize, _, _ = generateSample(20)
+        pointlistFullSize, _, _ = generateSample(20, draw=False)
         maxTime = 300
         time = 0
         # choose one realtree as tree A
@@ -222,7 +251,7 @@ def calDistance(iter):
             # print(predictLen, dist, ekldist, pkldist)
             evalData.append([predictLen, dist, ekldist, pkldist, dkldist, ikldist])
 
-        evalDataNp = np.array(evalData)
+    evalDataNp = np.array(evalData)
     print("predictLen", "treeDist", "ekldist", "pkldist", "dkldist", "ikldist")
     print("avg: ", evalDataNp.mean(0))
     print("min: ", evalDataNp.min(0))
@@ -248,6 +277,26 @@ def compareIteration():
     print("Max Iteration: ", maxIteration*10000, "   max Reward: ", maxReward)
     return maxIteration
 
+
+def drawDistributions(iter):
+    solver = testCaseGenerator(iter)
+    generatePointlist = []
+    times = 50
+    for j in range(times):
+        pointList, _, _ = generateSample(20, draw=False)
+        generatePointlist += pointList
+
+    fig = plt.figure(figsize=(16, 20))
+    histogramsComparison(distributions['elevation'], np.array(generatePointlist)[:,2], 0, fig)
+    plt.title('Elevation Distribution') 
+    histogramsComparison(distributions['prominence'], np.array(generatePointlist)[:,3], 1, fig)
+    plt.title('Prominence Distribution') 
+    histogramsComparison(distributions['dominance'], np.array(generatePointlist)[:,4], 2, fig)
+    plt.title('Dominence Distribution') 
+    histogramsComparison(distributions['isolation'], np.array(generatePointlist)[:,5], 3, fig)
+    plt.title('Isolation Distribution') 
+    plt.savefig('distribution' + str(iter) + '.png')
+
 # compareIteration()
 # calEdgeNum(140000, True)
 # calDistance(140000)
@@ -259,4 +308,6 @@ def run():
     print("cal avg edgeNUM and rewards ing...")
     calDistance(maxIteration*10000)
 
-run()
+# run()
+
+drawDistributions(190000)
