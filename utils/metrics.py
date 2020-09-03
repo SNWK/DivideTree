@@ -59,7 +59,7 @@ def computeProminences(RidgeTree, peakElevs, saddleElevs, saddlePeaks):
         pKeySaddle = -1
         pPromParent = -1
         hKeySaddle = 0  
-        
+
         # for all reachable higher peaks
         for pj in higherPeaks:
         
@@ -74,7 +74,7 @@ def computeProminences(RidgeTree, peakElevs, saddleElevs, saddlePeaks):
                 curr = preds[curr]
             path.append(pi)
             path = path[::-1]
-
+            print(path)
             # follow path pi->pj stopping at first higher peak, and keep lowest saddle
             minSaddle = -1
             minSaddleElev = peakElevs[pi] + 0.1
@@ -107,7 +107,10 @@ def computeProminences(RidgeTree, peakElevs, saddleElevs, saddlePeaks):
 
         promSaddle[pi] = pKeySaddle
         promParent[pi] = pPromParent
-        promValues[pi] = peakElevs[pi] - saddleElevs[pKeySaddle]
+        if pKeySaddle < 0:
+            promValues[pi] = peakElevs[pi]
+        else:
+            promValues[pi] = peakElevs[pi] - saddleElevs[pKeySaddle]
     
     return promSaddle, promParent, promValues, KeySaddleMatrix
 

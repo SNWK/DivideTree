@@ -44,11 +44,12 @@ def rebuildDivideTree(peaks, ridges):
         ridgeTree: RidgeTree[i,j] == saddle id connecting peak i to peak j, -1 ortherwise
         saddlePeaks: saddlePeaks[i] = [peak0, peak1]
     '''
-    peakElevs = dict()
-    peakCoords = dict()
+    peakElevs = list()
+    peakCoords = list()
     ridgeTree = -1 * np.ones((len(peaks), len(peaks)))
     saddlePeaks = list()
     saddles = list()
+    saddleElevs = list()
 
     peakAdj = collections.defaultdict(list)
     for i in range(len(ridges)):
@@ -56,8 +57,8 @@ def rebuildDivideTree(peaks, ridges):
         peakAdj[ridges[i][1]].append(ridges[i][0])
     
     for i in range(len(peaks)):
-        peakCoords[i] = [peaks[i][0], peaks[i][1]]
-        peakElevs[i] = peaks[i][2]
+        peakCoords.append([peaks[i][0], peaks[i][1]])
+        peakElevs.append(peaks[i][2])
 
     # random choose one peak
     peakidx = random.randint(0, len(peaks))
@@ -67,6 +68,8 @@ def rebuildDivideTree(peaks, ridges):
     
     for i in range(len(saddles)):
         saddlePeaks.append(saddles[i][3:])
+        saddleElevs.append(saddles[i][2])
         ridgeTree[saddles[i][3],saddles[i][4]] = i
+        ridgeTree[saddles[i][4], saddles[i][3]] = i
 
-    return saddles, saddlePeaks, ridgeTree, peakElevs, peakCoords
+    return np.array(saddles), np.array(saddlePeaks), np.array(saddleElevs), np.array(ridgeTree).astype(int), np.array(peakElevs), np.array(peakCoords)

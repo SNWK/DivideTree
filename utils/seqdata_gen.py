@@ -260,7 +260,6 @@ def genFullSeqExample(rootNode, isDFS=False):
     return nodeOrder
 
 def genDataMolGAN(peaks):
-    # For demo
     vertices = list(peaks.index)
     gsample = Graph()
     pairs = set()

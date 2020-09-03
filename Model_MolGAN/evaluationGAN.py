@@ -22,6 +22,7 @@ from analysis.peaksdata import *
 
 from utils.treeEditDistance import *
 import math
+from math import radians, cos, sin, asin, sqrt
 
 from rebuildSaddles import rebuildDivideTree
 from main import testCaseGenerator
@@ -112,6 +113,22 @@ def kldistance(distribution, synthesisValues):
         distance += phSynth[i]*(math.log(phSynth[i]) - math.log(phNorm[i]))
     return distance
 
+ 
+def haversine(lon1, lat1, lon2, lat2): 
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    """
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+ 
+    # haversine
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    r = 6371 
+    return c * r
+
 def generateSample(size, draw=True):
     z = solver.sample_z(1)
     z = Variable(torch.from_numpy(z)).to(solver.device).float()
@@ -133,8 +150,8 @@ def generateSample(size, draw=True):
     # disk radius = 8km
     
     for i in range(size):
-        x = nodes[i][0]
-        y = nodes[i][1]
+        x = (nodes[i][0] - 0.5)*0.3 - 9.0874
+        y = (nodes[i][1] - 0.5)*0.07 - 77.5737
         e = nodes[i][2] * (emax - emin) + emin
         p = nodes[i][3] * (pmax - pmin) + pmin
         d = nodes[i][4] * (dmin - dmax) + dmin
@@ -325,18 +342,47 @@ def drawDistributions(iter):
     plt.title('Isolation Distribution') 
     plt.savefig('distribution' + str(iter) + '.png')
 
-
-def rebuild(iter):
+def drawRebuildDistributions(iter):
     solver = testCaseGenerator(iter)
+    generatePointlist = []
+    times = 50
+    for j in range(times):
+        pointList = rebuild(iter, draw=False, needIter=False)
+        generatePointlist += pointList
+
+    fig = plt.figure(figsize=(16, 20))
+    histogramsComparison(distributions['elevation'], np.array(generatePointlist)[:,2], 0, fig)
+    plt.title('Elevation Distribution') 
+    histogramsComparison(distributions['prominence'], np.array(generatePointlist)[:,3], 1, fig)
+    plt.title('Prominence Distribution') 
+    histogramsComparison(distributions['dominance'], np.array(generatePointlist)[:,4], 2, fig)
+    plt.title('Dominence Distribution') 
+    histogramsComparison(distributions['isolation'], np.array(generatePointlist)[:,5], 3, fig)
+    plt.title('Isolation Distribution') 
+    plt.savefig('rebuildDistribution' + str(iter) + '.png')
+
+def rebuild(iter, draw=False, needIter=True):
+    if needIter:
+        solver = testCaseGenerator(iter)
     peaks, _, _ = generateSample(20, draw=False)
+    peakProms = np.array(peaks)[:,3]
     edgesMST = getMstRidges(peaks)
-    e = getTreeHMC(peaks)
-    drawMST(e)
-    plt.show()
-    saddles, saddlePeaks, ridgeTree, peakElevs, peakCoords = rebuildDivideTree(peaks, edgesMST) 
-    drawDivideTree(peaks, saddles, saddlePeaks)
-
-
+    # e = getTreeHMC(peaks)
+    # drawMST(e)
+    # plt.show()
+    saddles, saddlePeaks, saddleElevs, ridgeTree, peakElevs, peakCoords = rebuildDivideTree(peaks, edgesMST) 
+    if draw:
+        drawDivideTree(peaks, saddles, saddlePeaks)
+    promSaddle, promParent, promValues, KeySaddleMatrix = computeProminences(ridgeTree, peakElevs, saddleElevs, saddlePeaks)
+    peakDoms = peakProms / peakElevs   
+    isolDists, isolCoords = computeIsolations(peakCoords, peakElevs)
+    print('REBULD DONE!')
+    for i in range(len(peaks)):
+        peaks[i][3] = peakProms[i]
+        peaks[i][4] = peakDoms[i]
+        peaks[i][5] = isolDists[i]
+        
+    return peaks
 # compareIteration()
 # calEdgeNum(140000, True)
 # calDistance(140000)
@@ -351,5 +397,11 @@ def run():
 # run()
 
 # drawDistributions(190000)
+drawRebuildDistributions(190000)
+# rebuild(190000)
 
-rebuild(190000)
+# [-9.0874, -77.5737]
+# d = haversine(-9.0874, -77.5737, -9.3874, -77.5737)
+# longitude radius 0.3, latitude radius 0.07
+# (x - 0.5)*0.3 - 9.0874
+# (y - 0.5)*0.07 - 77.5737
