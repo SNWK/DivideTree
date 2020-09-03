@@ -23,6 +23,7 @@ from analysis.peaksdata import *
 from utils.treeEditDistance import *
 import math
 
+from rebuildSaddles import rebuildDivideTree
 from main import testCaseGenerator
 from solver import Solver
 from torch.autograd import Variable
@@ -49,6 +50,7 @@ def histogramsComparison(distribution, synthesisValues, pos, fig):
     ax = fig.add_subplot(4,2,1 + pos*2)
     _ = ax.bar (hmids, hSynth, width=np.diff(hbins), color=barColor, edgecolor=edgeColor)
     _ = ax.plot(hmids, hNorm, color='r')
+    plt.title('Blue: generated data distribution') 
 
     ax = fig.add_subplot(4,2,2 + pos*2)
     _ = ax.bar (hmids, hNorm, width=np.diff(hbins), color='g')
@@ -125,6 +127,11 @@ def generateSample(size, draw=True):
     nodes = nodes_logits.data.cpu().numpy()[0]
     pointList = []
     emin, emax, pmin, pmax, dmin, dmax, imin, imax = 173.73600000000002, 6735.7752, 30.7848, 2763.012, 0.005143981037873821, 0.7036450079239303, 0.050013523578808845, 2207.6431
+    
+    # TODO: X, Y
+    # [-9.0874, -77.5737]
+    # disk radius = 8km
+    
     for i in range(size):
         x = nodes[i][0]
         y = nodes[i][1]
@@ -158,7 +165,7 @@ def drawMST(edges):
         X.append([v[0], w[0]])
         Y.append([v[1], w[1]])
     for i in range(len(X)):
-        plt.plot(X[i], Y[i], color='r')
+        plt.plot(X[i], Y[i], color='g')
 
 def drawResult(pointList, edges, size):
     apointlist = np.array(pointList[:size])
@@ -178,8 +185,29 @@ def drawResult(pointList, edges, size):
     plt.scatter(apointlist[0,0], apointlist[0,1], c='y')
     plt.title('in MST')
     plt.savefig('molganSample' + str(size) + '.png')
-    plt.savefig('res/molganSample' + str(size) + '.png')
     # plt.show()
+    plt.clf()
+
+def drawDivideTree(peaks, saddles, saddlePeaks):
+    # draw ridges
+    for i in range(len(saddlePeaks)):
+        s = saddles[i]
+        p0 = peaks[saddlePeaks[i][0]]
+        p1 = peaks[saddlePeaks[i][1]]
+        plt.plot([p0[0], s[0]], [p0[1], s[1]], color='r')
+        plt.plot([p1[0], s[0]], [p1[1], s[1]], color='r')
+    
+    # draw peaks
+    for i in range(len(peaks)):
+        plt.scatter(peaks[i][0], peaks[i][1], c='g', marker='v')
+    
+    # draw saddles
+    for i in range(len(saddles)):
+        plt.scatter(saddles[i][0], saddles[i][1], c='b')
+
+    plt.title('rebuilded DivideTree')
+    plt.savefig('rebuildedDivideTree.png')
+    plt.show()
     plt.clf()
 
 
@@ -297,6 +325,18 @@ def drawDistributions(iter):
     plt.title('Isolation Distribution') 
     plt.savefig('distribution' + str(iter) + '.png')
 
+
+def rebuild(iter):
+    solver = testCaseGenerator(iter)
+    peaks, _, _ = generateSample(20, draw=False)
+    edgesMST = getMstRidges(peaks)
+    e = getTreeHMC(peaks)
+    drawMST(e)
+    plt.show()
+    saddles, saddlePeaks, ridgeTree, peakElevs, peakCoords = rebuildDivideTree(peaks, edgesMST) 
+    drawDivideTree(peaks, saddles, saddlePeaks)
+
+
 # compareIteration()
 # calEdgeNum(140000, True)
 # calDistance(140000)
@@ -310,4 +350,6 @@ def run():
 
 # run()
 
-drawDistributions(190000)
+# drawDistributions(190000)
+
+rebuild(190000)
