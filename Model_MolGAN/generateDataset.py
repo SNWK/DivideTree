@@ -20,8 +20,9 @@ from utils.coords import *
 regionShapesDir = '../data/regionShapes'
 regionPeaksDir = '../data/regionPeaks'
 regionSeqsDir = '../data/regionSeqs'
-regionTreeSeqsDir = '../data/regionTreeSeqs'
+regionTreeSeqsDir = '../data/regionTreeSeqs'    
 
+realDivideTreePath = '../data/realDivideTreeData/andes_peru.txt'
 def generate():
     regionShapes = ['andes_peru.shp']
 
@@ -95,6 +96,7 @@ def generate():
             pickle.dump(allTrees, f, pickle.HIGHEST_PROTOCOL)
 
     print(good, sta/good)
+
 
 if __name__ == "__main__":
     generate()

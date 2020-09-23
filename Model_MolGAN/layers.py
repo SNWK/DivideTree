@@ -8,7 +8,7 @@ from torch.nn.modules.module import Module
 class GraphConvolution(Module):
 
     def __init__(self, in_features, out_feature_list, b_dim, dropout):
-        # 4, [128, 64], 2, 0
+        # 6, [128, 64], 2, 0
         super(GraphConvolution, self).__init__()
         self.in_features = in_features
         self.out_feature_list = out_feature_list

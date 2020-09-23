@@ -82,7 +82,7 @@ class Solver(object):
         self.G = Generator(self.g_conv_dim, self.z_dim, # 16
                            20,
                            self.data.bond_num_types, # edges type 
-                           self.data.atom_num_types, # 4-d vector
+                           self.data.atom_num_types, # 6-d vector
                            self.dropout)
         self.D = Discriminator(self.d_conv_dim, self.m_dim, self.b_dim, self.dropout)
         self.V = Discriminator(self.d_conv_dim, self.m_dim, self.b_dim, self.dropout)
@@ -202,9 +202,9 @@ class Solver(object):
         if A_copy.ndim == 2:
             A_copy = [A_copy]
 
-        rr += 0.5*getTreeReward(A_copy, X_copy)
+        rr += 0.6*getTreeReward(A_copy, X_copy)
 
-        rr += 0.5*calConnectivityReward(A_copy)
+        rr += 0.4*calConnectivityReward(A_copy)
 
         return rr.reshape(-1, 1)
 

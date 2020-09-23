@@ -81,18 +81,18 @@ def computeDistributions(peaks, diskRadius, detailed=True):
         # detailed, for synthesis, double the bins of classification so we better target distributions
         percHistogramBins = np.append(np.arange(0, 1.0, 0.025), 1.0)
         anglHistogramBins = np.append(np.arange(0, 360, 30), 360)
-        elevHistogramBins = np.append(np.arange(0, 8000, 100), [8000, 8200, 8400, 8600, 8800])
-        promHistogramBins = np.append(np.arange(0, 2000, 50), [2000, 2100])
-        domiHistogramBins = np.array([0, 0.0035, 0.007, 0.014, 0.021, 0.042, 0.07, 0.105, 0.14, 0.245, 0.49, 0.882, 1.0])
-        isolHistogramBins = np.append(np.arange(0, 1.0, 0.0125), 1.0)*diskRadius
+        elevHistogramBins = np.append(-2000, np.append(np.arange(0, 8000, 100), [8000, 8200, 8400, 8600, 8800]))
+        promHistogramBins = np.append(-500,np.append(np.arange(0, 2000, 50), [2000, 2100]))
+        domiHistogramBins = np.array([-0.5, 0, 0.0035, 0.007, 0.014, 0.021, 0.042, 0.07, 0.105, 0.14, 0.245, 0.49, 0.882, 1.0])
+        isolHistogramBins = np.append(-0.5,np.append(np.arange(0, 1.0, 0.0125), 1.0))*diskRadius
     else:
         # bins used in classifier
         percHistogramBins = np.append(np.arange(0, 1.0, 0.05), 1.0)
         anglHistogramBins = np.append(np.arange(0, 360, 30), 360)
-        elevHistogramBins = np.append(np.arange(0, 8000, 250), [8000, 8250])
-        promHistogramBins = np.append(np.arange(0, 2000, 100), [2000, 2200])
-        domiHistogramBins = np.array([0, 0.0035, 0.007, 0.014, 0.021, 0.042, 0.07, 0.105, 0.14, 0.245, 0.49, 0.882, 1.0])
-        isolHistogramBins = np.append(np.arange(0, 1.0, 0.05), 1.0)*diskRadius
+        elevHistogramBins = np.append(-2000, np.append(np.arange(0, 8000, 250), [8000, 8250]))
+        promHistogramBins = np.append(-500,np.append(np.arange(0, 2000, 100), [2000, 2200]))
+        domiHistogramBins = np.array([-0.5, 0, 0.0035, 0.007, 0.014, 0.021, 0.042, 0.07, 0.105, 0.14, 0.245, 0.49, 0.882, 1.0])
+        isolHistogramBins = np.append(-0.5,np.append(np.arange(0, 1.0, 0.05), 1.0))*diskRadius
         
     # histograms
     h_elev       = histogramFromBins(elevation,   bins = elevHistogramBins)

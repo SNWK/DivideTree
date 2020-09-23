@@ -20,7 +20,7 @@ def calConnectivityRatio(A):
     for value in groups.values():
         difGroups.add(value)
     if len(difGroups) != 0:
-        return (1./len(difGroups))**(1/2)
+        return (1./len(difGroups))**(1/3)
     else:
         return 0.
 
@@ -47,7 +47,7 @@ def calTreeReward(A, X):
     else: 
         rr = 0.
     # # all values at A's diagonal line should be zero
-    # rr *= 1 - abs(traceSum/len(X))
+    # rr *= 1 - (traceSum/len(X))**2
 
     # # each node should have at least one edge 
     # A_fill = A.copy()

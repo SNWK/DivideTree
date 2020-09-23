@@ -143,15 +143,17 @@ def generateSample(size, draw=True):
     edgeNums = (np.sum(edges)-np.trace(edges))/2.
     nodes = nodes_logits.data.cpu().numpy()[0]
     pointList = []
-    emin, emax, pmin, pmax, dmin, dmax, imin, imax = 173.73600000000002, 6735.7752, 30.7848, 2763.012, 0.005143981037873821, 0.7036450079239303, 0.050013523578808845, 2207.6431
+    xmin, xmax, ymin, ymax, emin, emax, pmin, pmax, dmin, dmax, imin, imax = -78.3892, -71.3783, -16.16, -7.865, 173.73600000000002,  6735.7752,  30.7848,  2763.012,  0.005143981037873821,  0.7036450079239303,  0.050030301715518456,  2207.6431
     
     # TODO: X, Y
     # [-9.0874, -77.5737]
     # disk radius = 8km
     
     for i in range(size):
-        x = (nodes[i][0] - 0.5)*0.3 - 9.0874
-        y = (nodes[i][1] - 0.5)*0.07 - 77.5737
+        # x = nodes[i][0] * (xmax - xmin) + xmin
+        # y = nodes[i][1] * (ymax - ymin) + ymin
+        x = (nodes[i][0] - 0.5)*0.6 - 9.0874
+        y = (nodes[i][1] - 0.5)*0.14 - 77.5737
         e = nodes[i][2] * (emax - emin) + emin
         p = nodes[i][3] * (pmax - pmin) + pmin
         d = nodes[i][4] * (dmin - dmax) + dmin
@@ -239,28 +241,28 @@ df, distributions, sampleLocations = calDatasetInfo()
 ============================================================
 initial the molGAN Solver
 ''' 
-solver = testCaseGenerator(90000)
+solver = testCaseGenerator(10000)
 
 def calEdgeNum(iter, isDraw):
     totalNums = 0
     totalRewards = 0
     times = 100
-    solver = testCaseGenerator(iter)
+    solver.restore_model(iter)
     for i in tqdm(range(times)):
         _, edgeNums, r = generateSample(20, draw=isDraw)
         totalNums += edgeNums
         totalRewards += r
-        time.sleep(1)
     print("Avg edgeNums: ", totalNums / times)
     print("Avg rewards: ", totalRewards / times)
 
 def calDistance(iter):
-    solver = testCaseGenerator(iter)
+    solver.restore_model(iter)
     times = 0
     # generateSample(40)
     evalData = []
     for sample in tqdm(range(50)):
-        pointlistFullSize, _, _ = generateSample(20, draw=False)
+        # pointlistFullSize, _, _ = generateSample(20, draw=False)
+        pointlistFullSize = rebuild(iter, draw=False, needIter=False)
         maxTime = 300
         time = 0
         # choose one realtree as tree A
@@ -307,7 +309,7 @@ def compareIteration():
     maxReward = -100
     times = 100
     for i in range(1, 21):
-        solver = testCaseGenerator(i*10000)
+        solver.restore_model(i*10000)
         totalReward = 0
         for j in range(times):
             _, _, reward = generateSample(15, draw=False)
@@ -324,7 +326,7 @@ def compareIteration():
 
 
 def drawDistributions(iter):
-    solver = testCaseGenerator(iter)
+    solver.restore_model(iter)
     generatePointlist = []
     times = 50
     for j in range(times):
@@ -343,7 +345,7 @@ def drawDistributions(iter):
     plt.savefig('distribution' + str(iter) + '.png')
 
 def drawRebuildDistributions(iter):
-    solver = testCaseGenerator(iter)
+    solver.restore_model(iter)
     generatePointlist = []
     times = 50
     for j in range(times):
@@ -363,7 +365,7 @@ def drawRebuildDistributions(iter):
 
 def rebuild(iter, draw=False, needIter=True):
     if needIter:
-        solver = testCaseGenerator(iter)
+        solver.restore_model(iter)
     peaks, _, _ = generateSample(20, draw=False)
     peakProms = np.array(peaks)[:,3]
     edgesMST = getMstRidges(peaks)
@@ -376,7 +378,6 @@ def rebuild(iter, draw=False, needIter=True):
     promSaddle, promParent, promValues, KeySaddleMatrix = computeProminences(ridgeTree, peakElevs, saddleElevs, saddlePeaks)
     peakDoms = peakProms / peakElevs   
     isolDists, isolCoords = computeIsolations(peakCoords, peakElevs)
-    print('REBULD DONE!')
     for i in range(len(peaks)):
         peaks[i][3] = peakProms[i]
         peaks[i][4] = peakDoms[i]
@@ -391,17 +392,20 @@ def run():
     maxIteration = compareIteration()
     print("cal avg edgeNUM and rewards ing...")
     calEdgeNum(maxIteration*10000, True)
+    print("draw rebuild distribution...")
+    drawDistributions(maxIteration*10000)
+    drawRebuildDistributions(maxIteration*10000)
     print("cal avg edgeNUM and rewards ing...")
     calDistance(maxIteration*10000)
 
-# run()
+run()
 
-# drawDistributions(190000)
-drawRebuildDistributions(190000)
+# calEdgeNum(30000, True)
+# drawDistributions(110000)
 # rebuild(190000)
 
 # [-9.0874, -77.5737]
 # d = haversine(-9.0874, -77.5737, -9.3874, -77.5737)
 # longitude radius 0.3, latitude radius 0.07
-# (x - 0.5)*0.3 - 9.0874
-# (y - 0.5)*0.07 - 77.5737
+# (x - 0.5)*0.6 - 9.0874
+# (y - 0.5)*0.14 - 77.5737solver = testCaseGenerator(iter)
