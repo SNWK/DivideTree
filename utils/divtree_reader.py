@@ -1,7 +1,7 @@
 import numpy as np
 from utils.coords import *
 
-
+# peakid latiCo LongiCo eleMeter Lati Longi ProMeter isoKM dom
 def readDivideTree(filepath, crop=[], returnDEMCoords=False):
     
     fin = open(filepath, 'r')
@@ -13,14 +13,20 @@ def readDivideTree(filepath, crop=[], returnDEMCoords=False):
 
     numPeaks = int(fin.readline().split()[1])
     peakCoords = np.zeros((numPeaks,2))
-    peakElevs = np.zeros((numPeaks,))    
+    peakElevs = np.zeros((numPeaks,))
+    peakProms = np.zeros((numPeaks,))
+    peakDoms = np.zeros((numPeaks,)) 
+    peakIsos = np.zeros((numPeaks,)) 
     idPeak = 0
     peakReorder = np.full((numPeaks,), -1)
     for i in range(numPeaks):
         peak = fin.readline().split()
         peakCoords[i, 0] = float(peak[1])
         peakCoords[i, 1] = float(peak[2])
-        peakElevs [i]    = feet2m(float(peak[3]))
+        peakElevs [i]    = float(peak[3])
+        peakProms[i] = float(peak[6])
+        peakDoms[i] = float(peak[7])
+        peakIsos[i] = float(peak[8])
         if doCrop:
             if peakCoords[i,0] < lonMin or peakCoords[i,1] < latMin or peakCoords[i,0] > lonMax or peakCoords[i,1] > latMax:
                 continue
@@ -39,7 +45,7 @@ def readDivideTree(filepath, crop=[], returnDEMCoords=False):
         saddle = fin.readline().split()
         saddleCoords[i, 0] = float(saddle[1])
         saddleCoords[i, 1] = float(saddle[2])
-        saddleElevs [i]    = feet2m(float(saddle[3]))
+        saddleElevs [i]    = float(saddle[3])
         if returnDEMCoords:
             saddleCoords[i, 0] = float(saddle[4])
             saddleCoords[i, 1] = float(saddle[5])
@@ -88,4 +94,4 @@ def readDivideTree(filepath, crop=[], returnDEMCoords=False):
     saddlePeaks  = saddlePeaks[saddleReorder >= 0, :]        
 
     
-    return peakCoords, peakElevs, saddleCoords, saddleElevs, saddlePeaks, RidgeTree
+    return peakCoords, peakElevs, peakProms, peakDoms, peakIsos, saddleCoords, saddleElevs, saddlePeaks, RidgeTree
