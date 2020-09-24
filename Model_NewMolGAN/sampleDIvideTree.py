@@ -12,27 +12,64 @@ from utils.coords import *
 from utils.divtree_reader import readDivideTree
 
 class divSampler():
-    def __init__(self, filesPath, selected_file):
-        self.fpath = os.path.join(filesPath, selected_file)
+    def __init__(self, filePath):
+        self.fpath = filePath
         self.load()
+        # for per tree x,y normalization
+        self.xdif = []
+        self.ydif = []
 
     def load(self):
         # read divide tree
-        self.data = readDivideTree(self.fpath, returnDEMCoords=False)
+        self.data = list(readDivideTree(self.fpath, returnDEMCoords=False))
+
+        # global normalization
+        self.data[0][:,0] =(self.data[0][:,0]/2)
+        self.data[0][:,1] =((self.data[0][:,1]+1)/2)
+        self.data[5][:,0] =(self.data[5][:,0]/2)
+        self.data[5][:,1] =((self.data[5][:,1]+1)/2)
+
+        elemin = min(np.min(self.data[1]), np.min(self.data[6]))
+        elemax = max(np.max(self.data[1]), np.max(self.data[6]))
+        self.data[1] = self.normalization(self.data[1], elemin, elemax)
+        self.data[6] = self.normalization(self.data[6], elemin, elemax)
+
+        promin = np.min(self.data[2])
+        promax = np.max(self.data[2])
+        self.data[2] = self.normalization(self.data[2], elemin, elemax)
+
+        dommin = np.min(self.data[3])
+        dommax = np.min(self.data[3])
+        self.data[3] = self.normalization(self.data[3], elemin, elemax)
+
+        isomin = np.min(self.data[4])
+        isomax = np.min(self.data[4])
+        self.data[4] = self.normalization(self.data[4], elemin, elemax)
+        
+        print("Global Normallization")
+        print(elemin, elemax, promin, promax, dommin, dommax, isomin, isomax)
+
         numPeaks = self.data[2].size
         print("Data loading, Number of peaks {}".format(numPeaks))
+
+    def normalization(self, l, min, max):
+        return (l - min) / (max - min)
 
     def getAllinfo(self):
         _, peakElevs, peakProms, peakDoms, peakIsos, _, _, _, _ = self.data
         return peakElevs, peakProms, peakDoms, peakIsos
 
-    def sampleTree(self, size):
-        peakCoords, peakElevs, peakProms, peakDoms, peakIsos, saddleCoords, saddleElevs, saddlePeaks, RidgeTree = self.data
+    def getXYavgDif(self):
+        avgx = sum(self.xdif) / len(self.xdif)
+        avgy = sum(self.ydif) / len(self.ydif)
+        print("x", avgx)
+        print("y", avgy)
 
-        peakCoords[:,0] =(peakCoords[:,0]/2)
-        peakCoords[:,1] =((peakCoords[:,1]+1)/2)
-        saddleCoords[:,0] =(saddleCoords[:,0]/2)
-        saddleCoords[:,1] =((saddleCoords[:,1]+1)/2)
+        return avgx, avgy
+
+    def sampleTree(self, size):
+        # 0         1          2          3         4         5             6            7            8
+        peakCoords, peakElevs, peakProms, peakDoms, peakIsos, saddleCoords, saddleElevs, saddlePeaks, RidgeTree = self.data
 
         A = [[0 for i in range(size*2+1)] for j in range(size*2+1)]
         X = []
@@ -67,13 +104,21 @@ class divSampler():
             if len(visitedSaddles) > size-1:
                 break
         
-        for s in visitedSaddles:
-            X.append([0, saddleCoords[s, 0], saddleCoords[s, 1], saddleElevs[s]])
         visitedSaddles = list(visitedSaddles)
-        peaks = set(saddlePeaks[visitedSaddles].reshape(-1))
+        peaks = list(set(saddlePeaks[visitedSaddles].reshape(-1)))
+
+        minx = min(np.min(saddleCoords[visitedSaddles, 0]), np.min(peakCoords[peaks, 0]))
+        maxx = max(np.max(saddleCoords[visitedSaddles, 0]), np.max(peakCoords[peaks, 0]))
+        self.xdif.append(maxx - minx) 
+        miny = min(np.min(saddleCoords[visitedSaddles, 1]), np.min(peakCoords[peaks, 1]))
+        maxy = max(np.max(saddleCoords[visitedSaddles, 1]), np.max(peakCoords[peaks, 1]))
+        self.ydif.append(maxy - miny) 
+        for s in visitedSaddles:
+            X.append([0, self.normalization(saddleCoords[s, 0], minx, maxx), self.normalization(saddleCoords[s, 1], miny, maxy), saddleElevs[s]])
         peakIdxDict = dict()
+
         for p in peaks:
-            X.append([1, peakCoords[p, 0], peakCoords[p, 1], peakElevs[p]])
+            X.append([1, self.normalization(peakCoords[p, 0], minx, maxx), self.normalization(peakCoords[p, 1], miny, maxy), peakElevs[p]])
             peakIdxDict[p] = len(X) - 1
         
         for i, ps in enumerate(list(saddlePeaks[visitedSaddles])):
@@ -89,7 +134,7 @@ class divSampler():
 
 
 if __name__ == "__main__":
-    testSampler = divSampler('dems', "andes_peru.txt")
+    testSampler = divSampler('dems/andes_peru.txt')
     L, A, X = testSampler.sampleTree(5)
     print(L)
     print(np.array(A))
