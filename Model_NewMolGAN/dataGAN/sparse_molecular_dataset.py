@@ -50,7 +50,7 @@ class SparseMolecularDataset():
 
     def _generate_encoders_decoders(self):
         self.log('Creating atoms encoder and decoder..')
-        self.atom_num_types = 6 # feature dimensions
+        self.atom_num_types = 4 # feature dimensions
         self.log('Created atoms encoder and decoder with {} atom types and 1 PAD symbol!'.format(
             self.atom_num_types - 1))
 
@@ -59,6 +59,7 @@ class SparseMolecularDataset():
 
         self.bond_encoder_m = {l: i for i, l in enumerate(bond_labels)}
         self.bond_decoder_m = {i: l for i, l in enumerate(bond_labels)}
+        print(self.bond_encoder_m, self.bond_decoder_m)
         self.bond_num_types = len(bond_labels)
         self.log('Created bonds encoder and decoder with {} bond types and 1 PAD symbol!'.format(
             self.bond_num_types - 1))
@@ -117,7 +118,7 @@ class SparseMolecularDataset():
 
         max_length = max_length if max_length is not None else mol[0]
         X = mol[2]
-        X += [[0, 0, 0, 0, 0, 0] for i in range(max_length - mol[0]) ]
+        X += [[0, 0, 0, 0] for i in range(max_length - mol[0]) ]
         X = np.array(X)
         return np.array(X)
 

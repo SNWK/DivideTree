@@ -27,7 +27,7 @@ class Solver(object):
 
         # Model configurations.
         self.z_dim = config.z_dim # 16
-        self.m_dim = self.data.atom_num_types # 4
+        self.m_dim = self.data.atom_num_types + 1 # 4
         self.b_dim = self.data.bond_num_types # 2
         self.g_conv_dim = config.g_conv_dim # [256, 512, 1024]
         self.d_conv_dim = config.d_conv_dim # [[128, 64], 128, [128, 64]]
@@ -80,9 +80,9 @@ class Solver(object):
         """Create a generator and a discriminator."""
         # self.data.vertexes
         self.G = Generator(self.g_conv_dim, self.z_dim, # 16
-                           20,
-                           self.data.bond_num_types, # edges type 
-                           self.data.atom_num_types, # 6-d vector
+                           31,
+                           self.b_dim, # edges type 
+                           self.m_dim, # 4-d vector
                            self.dropout)
         self.D = Discriminator(self.d_conv_dim, self.m_dim, self.b_dim, self.dropout)
         self.V = Discriminator(self.d_conv_dim, self.m_dim, self.b_dim, self.dropout)
@@ -237,10 +237,14 @@ class Solver(object):
             # =================================================================================== #
 
             a = torch.from_numpy(a).to(self.device).long()            # Adjacency.
-            x = torch.from_numpy(x).to(self.device).float()            # Nodes.
             a_tensor = self.label2onehot(a, self.b_dim)
-            x_tensor = x
-            z = torch.from_numpy(z).to(self.device).float()
+
+            nodeType = torch.from_numpy(x[:,:,0]).to(self.device).long()  # the first dimension is the node Type
+            x = torch.from_numpy(x[:,:,1:]).to(self.device).float()      # the other dimensions are Nodes vector [x, y, ele].
+            
+            nodeType_tensor = self.label2onehot(nodeType, 2) # one-hot
+            x_tensor = torch.cat((nodeType_tensor, x), 2) # [type, type, x, y, ele] 
+            z = torch.from_numpy(z).to(self.device).float() # 32
 
             # =================================================================================== #
             #                             2. Train the discriminator                              #
@@ -254,16 +258,19 @@ class Solver(object):
             edges_logits, nodes_logits = self.G(z)
             # Postprocess with Gumbel softmax
             (edges_hat) = self.postprocess((edges_logits), self.post_method)
+            t1, t2 = torch.split(nodes_logits, [2,3], dim=2)
+            (t1) = self.postprocess((t1), self.post_method)
+            nodes_hat = torch.cat((t1,t2), 2)
             # to be symetric
             edges_hat = (edges_hat + edges_hat.permute(0,2,1,3))/2
             # nodes_hat = nodes_logits
-            logits_fake, features_fake = self.D(edges_hat, None, nodes_logits)
+            logits_fake, features_fake = self.D(edges_hat, None, nodes_hat)
             d_loss_fake = torch.mean(logits_fake)
 
             # Compute loss for gradient penalty.
             eps = torch.rand(logits_real.size(0),1,1,1).to(self.device)
             x_int0 = (eps * a_tensor + (1. - eps) * edges_hat).requires_grad_(True)
-            x_int1 = (eps.squeeze(-1) * x_tensor + (1. - eps.squeeze(-1)) * nodes_logits).requires_grad_(True)
+            x_int1 = (eps.squeeze(-1) * x_tensor + (1. - eps.squeeze(-1)) * nodes_hat).requires_grad_(True)
             grad0, grad1 = self.D(x_int0, None, x_int1)
             # print(grad0.shape, x_int0.shape, grad1.shape, x_int1.shape)
             # print(x_int0)
@@ -291,7 +298,11 @@ class Solver(object):
                 edges_logits, nodes_logits = self.G(z)
                 # Postprocess with Gumbel softmax
                 (edges_hat) = self.postprocess((edges_logits), self.post_method)
-                logits_fake, features_fake = self.D(edges_hat, None, nodes_logits)
+                t1, t2 = torch.split(nodes_logits, [2,3], dim=2)
+                (t1) = self.postprocess((t1), self.post_method)
+                nodes_hat = torch.cat((t1,t2), 2)
+
+                logits_fake, features_fake = self.D(edges_hat, None, nodes_hat)
                 g_loss_fake = - torch.mean(logits_fake)
 
                 # Real Reward
@@ -299,7 +310,12 @@ class Solver(object):
                 # Fake Reward
                 (edges_hard) = self.postprocess((edges_logits), self.post_method)
                 edges_hard = (edges_hard + edges_hard.permute(0,2,1,3))/2
-                edges_hard, nodes_hard = torch.max(edges_hard, -1)[1], nodes_logits
+                edges_hard = torch.max(edges_hard, -1)[1]
+                t1, t2 = torch.split(nodes_logits, [2,3], dim=2)
+                (t1) = self.postprocess((t1), self.post_method)
+                t1 = torch.max(t1, -1)[1]
+                t1 = torch.reshape(t1,(t1.shape[0], t1.shape[1], 1))
+                nodes_hard = torch.cat((t1,t2), 2)
                 # mols = [self.data.matrices2mol(n_.data.cpu().numpy(), e_.data.cpu().numpy(), strict=True)
                 #         for e_, n_ in zip(edges_hard, nodes_hard)]
                 rewardF = torch.from_numpy(self.reward(edges_hard, nodes_hard)).to(self.device)
@@ -369,27 +385,18 @@ class Solver(object):
             # Z-to-target
             edges_logits, nodes_logits = self.G(z)
             # Postprocess with Gumbel softmax
-            (edges_hat, nodes_hat) = self.postprocess((edges_logits, nodes_logits), self.post_method)
+            (edges_hat) = self.postprocess((edges_logits), self.post_method)
             edges_hat = (edges_hard + edges_hard.permute(0,2,1,3))/2
             A = torch.max(edges_hat, -1)[1]
+
+            t1, t2 = torch.split(nodes_logits, [2,3], dim=2)
+            (t1) = self.postprocess((t1), self.post_method)
+            t1 = torch.max(t1, -1)[1]
+            t1 = torch.reshape(t1,(t1.shape[0], t1.shape[1], 1))
+            nodes_hat = torch.cat((t1,t2), 2)
             # print(A.data.cpu().numpy())
             # print(nodes_logits.data.cpu().numpy())
-            drawTree(A.data.cpu().numpy(), nodes_logits.data.cpu().numpy()[0])
-            # logits_fake, features_fake = self.D(edges_hat, None, nodes_hat)
-            # g_loss_fake = - torch.mean(logits_fake)
-
-            # # Fake Reward
-            # (edges_hard, nodes_hard) = self.postprocess((edges_logits, nodes_logits), 'hard_gumbel')
-            # edges_hard, nodes_hard = torch.max(edges_hard, -1)[1], torch.max(nodes_hard, -1)[1]
-            # mols = [self.data.matrices2mol(n_.data.cpu().numpy(), e_.data.cpu().numpy(), strict=True)
-            #         for e_, n_ in zip(edges_hard, nodes_hard)]
-
-            # # Log update
-            # m0, m1 = all_scores(mols, self.data, norm=True)     # 'mols' is output of Fake Reward
-            # m0 = {k: np.array(v)[np.nonzero(v)].mean() for k, v in m0.items()}
-            # m0.update(m1)
-            # for tag, value in m0.items():
-            #     log += ", {}: {:.4f}".format(tag, value)
+            drawTree(A.data.cpu().numpy(), nodes_hat.data.cpu().numpy()[0])
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
