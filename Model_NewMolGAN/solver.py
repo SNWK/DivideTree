@@ -386,13 +386,13 @@ class Solver(object):
             edges_logits, nodes_logits = self.G(z)
             # Postprocess with Gumbel softmax
             (edges_hat) = self.postprocess((edges_logits), self.post_method)
-            edges_hat = (edges_hard + edges_hard.permute(0,2,1,3))/2
+            edges_hat = (edges_hat + edges_hat.permute(1,0,2))/2
             A = torch.max(edges_hat, -1)[1]
 
             t1, t2 = torch.split(nodes_logits, [2,3], dim=2)
             (t1) = self.postprocess((t1), self.post_method)
             t1 = torch.max(t1, -1)[1]
-            t1 = torch.reshape(t1,(t1.shape[0], t1.shape[1], 1))
+            t1 = torch.reshape(t1,(1, t1.shape[0], 1))
             nodes_hat = torch.cat((t1,t2), 2)
             # print(A.data.cpu().numpy())
             # print(nodes_logits.data.cpu().numpy())
@@ -402,16 +402,39 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 def drawTree(edges, nodes):
-    X = []
-    Y = []
-    length = 20
-    for i in range(length):
-        for j in range(length):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)    
+
+    saddleCoords = []
+    peakCoords = []
+    peakElevs = []
+    for i in range(nodes.shape[0]):
+        tp, lati, longi, ele = nodes[i]
+        if tp == 0:
+            # saddle
+            saddleCoords.append([lati, longi])
+        else:
+            # peaks
+            peakCoords.append([lati, longi])
+            peakElevs.append(ele)
+    
+    saddleCoords = np.array(saddleCoords)
+    peakCoords = np.array(peakCoords)
+    peakElevs = np.array(peakElevs)
+
+    # plot peaks
+    ax.scatter(peakCoords[:,0], peakCoords[:,1], marker='^', zorder=3, s=20*peakElevs/peakElevs.max(), c='blue', edgecolors=(1,0.75,0,1), linewidths=1)
+
+    # plot saddles
+    ax.scatter(saddleCoords[:,0], saddleCoords[:,1], marker='o', c='blue', edgecolors=(146/255, 208/255, 80/255, 1), s=6, zorder=2)
+
+    # plot ridges
+    for i in range(edges.shape[0]):
+        for j in range(edges.shape[1]):
+            if i == j: continue
             if edges[i][j] == 1:
-                X.append([nodes[i][0], nodes[j][0]])
-                Y.append([nodes[i][1], nodes[j][1]])
-
-    for i in range(len(X)):
-        plt.plot(X[i], Y[i], color='r')   
-
-    plt.savefig('test.png')
+                p1 = nodes[i]
+                p2 = nodes[j]
+                ax.plot([p1[1], p2[1]], [p1[2], p2[2]], color='r', linewidth=1, zorder=1)
+                
+    plt.savefig('testimg.png')
