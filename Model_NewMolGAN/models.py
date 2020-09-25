@@ -32,7 +32,7 @@ class Generator(nn.Module):
         layers1 = []
         for c0, c1 in zip([z_dim]+conv_dims[:-1], conv_dims):
             layers1.append(nn.Linear(c0, c1))
-            layers1.append(nn.Tanh()) # -1,1
+            layers1.append(nn.Sigmoid()) # -1,1
             # layers.append(nn.Dropout(p=dropout, inplace=True))
         self.edges_layers = nn.Sequential(*layers1)
 
@@ -42,18 +42,10 @@ class Generator(nn.Module):
         #     layers2.append(nn.Tanh()) # -1,1
         #     # layers.append(nn.Dropout(p=dropout, inplace=True))
         self.nodes_layers = nn.Sequential(*layers1)
-        ######## update:  for map to 20000
-        # newdims = [2048] 
-        # newlayers = []
-        # for c0, c1 in zip([conv_dims[-1]]+newdims[:-1], newdims):
-        #     newlayers.append(nn.Linear(c0, c1))
-        #     newlayers.append(nn.ReLU()) # 0,1
-        #     newlayers.append(nn.Dropout(p=dropout, inplace=True))
-        # self.newlayers = nn.Sequential(*newlayers)
-        ########
-        self.edges_layer = nn.Linear(conv_dims[-1], edges * vertexes * vertexes) # 800
+
+        self.edges_layer = nn.Sequential(nn.Linear(conv_dims[-1], 2048), nn.Sigmoid(), nn.Linear(2048, edges * vertexes * vertexes))
         # self.nodes_layer = nn.Linear(conv_dims[-1], vertexes * nodes)
-        self.nodes_layer = nn.Sequential(nn.Linear(conv_dims[-1], vertexes * nodes))
+        self.nodes_layer = nn.Sequential(nn.Linear(conv_dims[-1], vertexes * nodes), nn.Sigmoid())
         
         # self.dropoout = nn.Dropout(p=dropout)
 

@@ -11,8 +11,14 @@ from torchvision.utils import save_image
 from utilsGAN import *
 from models import Generator, Discriminator
 from dataGAN.sparse_molecular_dataset import SparseMolecularDataset
-from rewardUtils import calConnectivityReward, getTreeReward
+from rewardUtils import getConnectivityReward, getTreeReward, getDistributionReward
 from tqdm import tqdm
+
+from sampleDIvideTree import *
+
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 printModel = False
 class Solver(object):
@@ -76,6 +82,10 @@ class Solver(object):
         if self.use_tensorboard:
             self.build_tensorboard()
 
+        # get data distribution for reward calculation
+        dataSampler = divSampler('dems/andes_peru.txt')
+        self.distribution = dataSampler.getDistribution()
+        
     def build_model(self):
         """Create a generator and a discriminator."""
         # self.data.vertexes
@@ -204,7 +214,9 @@ class Solver(object):
 
         rr += 0.6*getTreeReward(A_copy, X_copy)
 
-        rr += 0.4*calConnectivityReward(A_copy)
+        rr += 0.4*getConnectivityReward(A_copy)
+
+        rr += getDistributionReward(A_copy, X_copy, self.distribution)
 
         return rr.reshape(-1, 1)
 
@@ -240,10 +252,11 @@ class Solver(object):
             a_tensor = self.label2onehot(a, self.b_dim)
 
             nodeType = torch.from_numpy(x[:,:,0]).to(self.device).long()  # the first dimension is the node Type
-            x = torch.from_numpy(x[:,:,1:]).to(self.device).float()      # the other dimensions are Nodes vector [x, y, ele].
+            x_other = torch.from_numpy(x[:,:,1:]).to(self.device).float()      # the other dimensions are Nodes vector [x, y, ele].
+            x = torch.from_numpy(x).to(self.device).float()
             
             nodeType_tensor = self.label2onehot(nodeType, 2) # one-hot
-            x_tensor = torch.cat((nodeType_tensor, x), 2) # [type, type, x, y, ele] 
+            x_tensor = torch.cat((nodeType_tensor, x_other), 2) # [type, type, x, y, ele] 
             z = torch.from_numpy(z).to(self.device).float() # 32
 
             # =================================================================================== #
@@ -380,6 +393,7 @@ class Solver(object):
 
         with torch.no_grad():
             # mols, a, x, _, _, _ = self.data.next_test_batch()
+            
             z = self.sample_z(1)
             z = Variable(torch.from_numpy(z)).to(self.device).float()
             # Z-to-target
@@ -396,45 +410,43 @@ class Solver(object):
             nodes_hat = torch.cat((t1,t2), 2)
             # print(A.data.cpu().numpy())
             # print(nodes_logits.data.cpu().numpy())
-            drawTree(A.data.cpu().numpy(), nodes_hat.data.cpu().numpy()[0])
+            self.drawTree(A.data.cpu().numpy(), nodes_hat.data.cpu().numpy()[0])
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 
-def drawTree(edges, nodes):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)    
+    def drawTree(self, edges, nodes):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)    
 
-    saddleCoords = []
-    peakCoords = []
-    peakElevs = []
-    for i in range(nodes.shape[0]):
-        tp, lati, longi, ele = nodes[i]
-        if tp == 0:
-            # saddle
-            saddleCoords.append([lati, longi])
-        else:
-            # peaks
-            peakCoords.append([lati, longi])
-            peakElevs.append(ele)
-    
-    saddleCoords = np.array(saddleCoords)
-    peakCoords = np.array(peakCoords)
-    peakElevs = np.array(peakElevs)
+        saddleCoords = []
+        peakCoords = []
+        peakElevs = []
+        for i in range(nodes.shape[0]):
+            tp, lati, longi, ele = nodes[i]
+            if tp == 0:
+                # saddle
+                saddleCoords.append([lati, longi])
+            else:
+                # peaks
+                peakCoords.append([lati, longi])
+                peakElevs.append(ele)
+        
+        saddleCoords = np.array(saddleCoords)
+        peakCoords = np.array(peakCoords)
+        peakElevs = np.array(peakElevs)
 
-    # plot peaks
-    ax.scatter(peakCoords[:,0], peakCoords[:,1], marker='^', zorder=3, s=20*peakElevs/peakElevs.max(), c='blue', edgecolors=(1,0.75,0,1), linewidths=1)
+        # plot ridges
+        for i in range(edges.shape[0]):
+            for j in range(edges.shape[1]):
+                if i == j: continue
+                if edges[i][j] == 1:
+                    p1 = nodes[i]
+                    p2 = nodes[j]
+                    ax.plot([p1[1], p2[1]], [p1[2], p2[2]], color='r', linewidth=1, zorder=1)
+        
+        # plot peaks
+        ax.scatter(peakCoords[:,0], peakCoords[:,1], marker='^', zorder=3, s=20*peakElevs/peakElevs.max(), c='white', edgecolors=(1,0.75,0,1), linewidths=1)
 
-    # plot saddles
-    ax.scatter(saddleCoords[:,0], saddleCoords[:,1], marker='o', c='blue', edgecolors=(146/255, 208/255, 80/255, 1), s=6, zorder=2)
-
-    # plot ridges
-    for i in range(edges.shape[0]):
-        for j in range(edges.shape[1]):
-            if i == j: continue
-            if edges[i][j] == 1:
-                p1 = nodes[i]
-                p2 = nodes[j]
-                ax.plot([p1[1], p2[1]], [p1[2], p2[2]], color='r', linewidth=1, zorder=1)
-                
-    plt.savefig('testimg.png')
+        # plot saddles
+        ax.scatter(saddleCoords[:,0], saddleCoords[:,1], marker='o', c='white', edgecolors=(146/255, 208/255, 80/255, 1), s=6, zorder=2)
+                    
+        plt.savefig('testimg.png')

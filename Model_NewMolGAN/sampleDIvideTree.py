@@ -36,15 +36,15 @@ class divSampler():
 
         promin = np.min(self.data[2])
         promax = np.max(self.data[2])
-        self.data[2] = self.normalization(self.data[2], elemin, elemax)
+        self.data[2] = self.normalization(self.data[2], promin, promax)
 
         dommin = np.min(self.data[3])
-        dommax = np.min(self.data[3])
-        self.data[3] = self.normalization(self.data[3], elemin, elemax)
+        dommax = np.max(self.data[3])
+        self.data[3] = self.normalization(self.data[3], dommin, dommax)
 
         isomin = np.min(self.data[4])
-        isomax = np.min(self.data[4])
-        self.data[4] = self.normalization(self.data[4], elemin, elemax)
+        isomax = np.max(self.data[4])
+        self.data[4] = self.normalization(self.data[4], isomin, isomax)
         
         print("Global Normallization")
         print(elemin, elemax, promin, promax, dommin, dommax, isomin, isomax)
@@ -58,6 +58,46 @@ class divSampler():
     def getAllinfo(self):
         _, peakElevs, peakProms, peakDoms, peakIsos, _, _, _, _ = self.data
         return peakElevs, peakProms, peakDoms, peakIsos
+
+    def histogramFromBins(self, values, bins, frequencies=False):
+        h = np.histogram(np.clip(values, a_min=None, a_max=bins[-1]), bins=bins)[0]
+        if frequencies:
+            return h/np.sum(h)
+        else:
+            return h
+
+    def getDistribution(self):
+        elevation, prominence, dominance, isolation = self.getAllinfo()
+
+        elevHistogramBins = np.append(np.arange(0, 1.0, 0.01), 1.0)
+        promHistogramBins = np.append(np.arange(0, 1.0, 0.01), 1.0)
+        domiHistogramBins = np.append(np.arange(0, 1.0, 0.01), 1.0)
+        isolHistogramBins = np.append(np.arange(0, 1.0, 0.01), 1.0)
+
+        h_elev       = self.histogramFromBins(elevation,   bins = elevHistogramBins)
+        h_prom       = self.histogramFromBins(prominence,  bins = promHistogramBins)
+        h_dominance  = self.histogramFromBins(dominance,   bins = domiHistogramBins)
+        h_isolation  = self.histogramFromBins(isolation,   bins = isolHistogramBins)
+
+
+        p_elev = h_elev/np.sum(h_elev)
+        p_prom = h_prom/np.sum(h_prom)
+        p_dominance = h_dominance/np.sum(h_dominance)
+        p_isolation  = h_isolation/np.sum(h_isolation)
+        
+        x_elev = (elevHistogramBins[1:] + elevHistogramBins[:-1])/2
+        x_prom = (promHistogramBins[1:] + promHistogramBins[:-1])/2
+        x_isolation = (isolHistogramBins[1:] + isolHistogramBins[:-1])/2
+        x_dominance  = (domiHistogramBins[1:] + domiHistogramBins[:-1])/2
+
+        distributions = {
+            'elevation' : {'hist': h_elev,       'pdf': p_elev,       'bins': elevHistogramBins, 'x': x_elev },
+            'prominence': {'hist': h_prom,       'pdf': p_prom,       'bins': promHistogramBins, 'x': x_prom },
+            'isolation' : {'hist': h_isolation,  'pdf': p_isolation,  'bins': isolHistogramBins, 'x': x_isolation },
+            'dominance' : {'hist': h_dominance,  'pdf': p_dominance,  'bins': domiHistogramBins, 'x': x_dominance }
+        }
+
+        return distributions
 
     def getXYavgDif(self):
         avgx = sum(self.xdif) / len(self.xdif)

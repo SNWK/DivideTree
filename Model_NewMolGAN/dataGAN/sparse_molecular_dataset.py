@@ -192,8 +192,8 @@ class SparseMolecularDataset():
 
 if __name__ == '__main__':
     data = SparseMolecularDataset()
-    data.generate('dataGAN/data20.pkl')
-    data.save('dataGAN/20nodesnew.sparsedataset')
+    data.generate('dataGAN/data31.pkl')
+    data.save('dataGAN/31nodes.sparsedataset')
 
     # data = SparseMolecularDataset()
     # data.generate('data/qm9_5k.smi', validation=0.00021, test=0.00021)  # , filters=lambda x: x.GetNumAtoms() <= 9)
