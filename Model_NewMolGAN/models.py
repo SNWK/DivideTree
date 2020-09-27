@@ -45,7 +45,7 @@ class Generator(nn.Module):
 
         self.edges_layer = nn.Sequential(nn.Linear(conv_dims[-1], 2048), nn.Sigmoid(), nn.Linear(2048, edges * vertexes * vertexes))
         # self.nodes_layer = nn.Linear(conv_dims[-1], vertexes * nodes)
-        self.nodes_layer = nn.Sequential(nn.Linear(conv_dims[-1], vertexes * nodes), nn.Sigmoid())
+        self.nodes_layer = nn.Sequential(nn.Linear(conv_dims[-1], vertexes * nodes))
         
         # self.dropoout = nn.Dropout(p=dropout)
 

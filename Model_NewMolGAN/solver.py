@@ -208,9 +208,17 @@ class Solver(object):
         rr = 0.
         A_copy = A.cpu().detach().numpy().copy()
         X_copy = X.cpu().detach().numpy().copy()
-        
-        if A_copy.ndim == 2:
-            A_copy = [A_copy]
+
+        rr += 0.6*getTreeReward(A_copy, X_copy)
+
+        rr += 0.4*getConnectivityReward(A_copy)
+
+        rr += getDistributionReward(A_copy, X_copy, self.distribution)
+
+        return rr.reshape(-1, 1)
+
+    def evaReward(self, A_copy, X_copy):
+        rr = 0.
 
         rr += 0.6*getTreeReward(A_copy, X_copy)
 
@@ -413,7 +421,7 @@ class Solver(object):
             self.drawTree(A.data.cpu().numpy(), nodes_hat.data.cpu().numpy()[0])
 
 
-    def drawTree(self, edges, nodes):
+    def drawTree(self, edges, nodes, itr=200000):
         fig = plt.figure()
         ax = fig.add_subplot(111)    
 
@@ -449,4 +457,4 @@ class Solver(object):
         # plot saddles
         ax.scatter(saddleCoords[:,0], saddleCoords[:,1], marker='o', c='white', edgecolors=(146/255, 208/255, 80/255, 1), s=6, zorder=2)
                     
-        plt.savefig('testimg.png')
+        plt.savefig('test/testimg' + str(itr) + '.png')

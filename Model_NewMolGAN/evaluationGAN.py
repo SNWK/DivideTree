@@ -38,7 +38,7 @@ def histogramsComparison(distribution, synthesisValues, pos, fig):
     hbins  = distribution['bins']
     hmids  = distribution['x']
     hReal  = distribution['hist']
-    hSynth = histogramFromBins(synthesisValues, hbins, frequencies=False)
+    hSynth = dataSampler.histogramFromBins(synthesisValues, hbins, frequencies=False)
     hNorm  = np.round(synthesisValues.size * hReal/hReal.sum())
 
     # fig = plt.figure(figsize=(16, 5))
@@ -55,7 +55,7 @@ def histogramsComparison(distribution, synthesisValues, pos, fig):
     print('Per bin differences (synthesis - target)')
     print(hSynth - hNorm)
 
-def generateSample(size, draw=True):
+def generateSample(size, draw=True, itr=0):
     
     z = solver.sample_z(1)
     z = Variable(torch.from_numpy(z)).to(solver.device).float()
@@ -74,9 +74,12 @@ def generateSample(size, draw=True):
 
     edges = A.data.cpu().numpy()
     nodes = nodes_hat.data.cpu().numpy()[0]
-    if draw: solver.drawTree(edges, nodes)
+    x_r = nodes_hat.data.cpu().numpy()
+    rewardR = solver.evaReward(edges[np.newaxis, :], x_r)[0]
 
-    return edges, nodes, 0
+    if draw: solver.drawTree(edges, nodes, itr)
+
+    return edges, nodes, rewardR
 
 '''
 ============================================================
@@ -84,17 +87,6 @@ initial the molGAN Solver
 ''' 
 solver = testCaseGenerator(10000)
 
-def calEdgeNum(iter, isDraw):
-    totalNums = 0
-    totalRewards = 0
-    times = 100
-    solver.restore_model(iter)
-    for i in tqdm(range(times)):
-        _, edgeNums, r = generateSample(20, draw=isDraw)
-        totalNums += edgeNums
-        totalRewards += r
-    print("Avg edgeNums: ", totalNums / times)
-    print("Avg rewards: ", totalRewards / times)
 
 
 # calEdgeNum()
@@ -106,46 +98,43 @@ def compareIteration():
         solver.restore_model(i*10000)
         totalReward = 0
         for j in range(times):
-            _, _, reward = generateSample(15, draw=False)
+            _, _, reward = generateSample(31, draw=False)
             totalReward += reward
         aveReward = totalReward/times
         if aveReward >= maxReward:
             maxReward = aveReward
             maxIteration = i
         print("Iteration: ", i*10000, "   Average Reward: ", aveReward)
-        # time.sleep(1)
-    # print(totalNums / times)
     print("Max Iteration: ", maxIteration*10000, "   max Reward: ", maxReward)
     return maxIteration
 
 
 def drawDistributions(iter):
     solver.restore_model(iter)
-    generatePointlist = []
     times = 50
-    for j in range(times):
-        pointList, _, _ = generateSample(20, draw=False)
-        generatePointlist += pointList
+    eleAll = []
+    promAll = []
+    isoAll = []
+    for j in tqdm(range(times)):
+        edges, nodes, _ = generateSample(31, draw=False)
+        eles, proms, isos = getDistributionReward(edges[np.newaxis, :], nodes[np.newaxis, :], distributions, isEva=True)
+        eleAll += eles
+        promAll += proms
+        isoAll += isos
 
-    fig = plt.figure(figsize=(16, 20))
-    histogramsComparison(distributions['elevation'], np.array(generatePointlist)[:,2], 0, fig)
+    fig = plt.figure(figsize=(16, 15))
+    histogramsComparison(distributions['elevation'], np.array(eleAll), 0, fig)
     plt.title('Elevation Distribution') 
-    histogramsComparison(distributions['prominence'], np.array(generatePointlist)[:,3], 1, fig)
+    histogramsComparison(distributions['prominence'], np.array(promAll), 1, fig)
     plt.title('Prominence Distribution') 
-    histogramsComparison(distributions['dominance'], np.array(generatePointlist)[:,4], 2, fig)
-    plt.title('Dominence Distribution') 
-    histogramsComparison(distributions['isolation'], np.array(generatePointlist)[:,5], 3, fig)
+    histogramsComparison(distributions['isolation'], np.array(isoAll), 2, fig)
     plt.title('Isolation Distribution') 
     plt.savefig('distribution' + str(iter) + '.png')
 
 def run():
-    edges, nodes, rewardR = generateSample(31)
-    print(getDistributionReward(edges, nodes, distributions, isEva=True))
-    # maxIteration = compareIteration()
-    # print("cal avg edgeNUM and rewards ing...")
-    # calEdgeNum(maxIteration*10000, True)
-    # print("draw rebuild distribution...")
-    # drawDistributions(maxIteration*10000)
+    maxIteration = compareIteration()
+    print("draw distribution...")
+    drawDistributions(maxIteration*10000)
     
 
 run()

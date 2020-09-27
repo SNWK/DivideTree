@@ -143,13 +143,13 @@ def getDistributionReward(A, X, distributions, isEva=False):
             eleAll += ele
             promAll += prom
             isoAll += iso
+
+    if isEva:
+        return eleAll, promAll, isoAll
         
     ekldist = kldistance(distributions['elevation'], np.array(eleAll))
     pkldist = kldistance(distributions['prominence'], np.array(promAll))
     ikldist = kldistance(distributions['isolation'], np.array(isoAll))
-
-    if isEva:
-        return ekldist, pkldist, ikldist
 
     reward = np.ones((len(A)))*(ekldist + pkldist + ikldist)
     return np.array(reward)
