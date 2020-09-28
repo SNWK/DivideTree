@@ -83,11 +83,12 @@ def getDistributionReward(A, X, distributions, isEva=False):
         for i in range(len(edges)):
             for j in range(len(edges[0])):
                 if i == j: continue
-                if i in saddleInfo.keys() and j in saddleInfo.keys(): continue
-                if i in saddleInfo.keys() and j not in saddleInfo.keys(): 
-                    ridges[j].append(i)
-                if i not in saddleInfo.keys() and j in saddleInfo.keys(): 
-                    ridges[i].append(j)
+                if edges[i][j] == 1:
+                    if i in saddleInfo.keys() and j in saddleInfo.keys(): continue
+                    if i in saddleInfo.keys() and j not in saddleInfo.keys(): 
+                        ridges[j].append(i)
+                    if i not in saddleInfo.keys() and j in saddleInfo.keys(): 
+                        ridges[i].append(j)
 
         # calculate proms:
         #### if there are saddles connected to it, seem the lowest one as the key saddle
@@ -151,7 +152,89 @@ def getDistributionReward(A, X, distributions, isEva=False):
     pkldist = kldistance(distributions['prominence'], np.array(promAll))
     ikldist = kldistance(distributions['isolation'], np.array(isoAll))
 
-    reward = np.ones((len(A)))*(ekldist + pkldist + ikldist)
+    reward = np.ones((len(A)))*(1 - (ekldist + pkldist + ikldist))
+    return np.array(reward)
+
+def getEdgeLengthReward(A, X, isEva=False):
+    def calEdgeDist(edges, nodes):
+        edges = edges.tolist()
+        nodes = nodes.tolist()
+        length = 0
+        edgeNum = 0
+        # ridges
+        for i in range(len(edges)):
+            for j in range(len(edges[0])):
+                if i == j: continue
+                if edges[i][j] == 1:
+                    length += math.sqrt((nodes[i][1] - nodes[j][1])**2 + (nodes[i][2] - nodes[j][2])**2)
+                    edgeNum += 1
+        if edgeNum == 0:
+            return 0
+        return length/edgeNum
+
+    reward = []
+    if isEva:
+        return calEdgeDist(A, X)
+
+    if len(A.shape) == 2:
+        reward.append(1 - calEdgeDist(A, X))
+    else:
+        for i in range(len(A)): 
+            reward.append(1 - calEdgeDist(A[i], X[i]))
+    
+    return np.array(reward)
+
+
+def getEdgeCrossReward(A, X, isEva=False):
+    def iscross(line1, line2):
+        A, B = line1
+        C, D = line2
+        AC = C - A
+        AD = D - A
+        BC = C - B
+        BD = D - B
+        CA = - AC
+        CB = - BC
+        DA = - AD
+        DB = - BD
+        
+        return np.cross(AC,AD)*np.cross(BC,BD) <= 0 and np.cross(CA,CB)*np.cross(DA,DB) <= 0
+
+    def calEdgeCross(edges, nodes):
+        edges = edges.tolist()
+        nodes = nodes.tolist()
+        # ridges
+        edgesList = []
+        edgeSet = set()
+        for i in range(len(edges)):
+            for j in range(len(edges[0])):
+                if i == j: continue
+                if edges[i][j] == 1 and (i,j) not in edgeSet:
+                    edgesList.append([np.array([nodes[i][1], nodes[i][2]]), np.array([nodes[j][1], nodes[j][2]])])
+                    edgeSet.add((i,j))
+                    edgeSet.add((j,i))
+        
+        crossNum = 0
+        for i in range(len(edgesList)-1):
+            for j in range(i+1, len(edgesList)):
+                if iscross(edgesList[i], edgesList[j]):
+                    crossNum += 1
+        
+        edgeNum = len(edgesList)
+        if edgeNum == 0:
+            return 0
+        return crossNum/edgeNum
+
+    reward = []
+    if isEva:
+        return calEdgeCross(A, X)
+
+    if len(A.shape) == 2:
+        reward.append(1 - calEdgeCross(A, X))
+    else:
+        for i in range(len(A)): 
+            reward.append(1 - calEdgeCross(A[i], X[i]))
+    
     return np.array(reward)
 
 # A = [[

@@ -98,7 +98,10 @@ def compareIteration():
         solver.restore_model(i*10000)
         totalReward = 0
         for j in range(times):
-            _, _, reward = generateSample(31, draw=False)
+            if j == 0:
+                _, _, reward = generateSample(31, draw=True, itr=i)
+            else:
+                _, _, reward = generateSample(31, draw=False)
             totalReward += reward
         aveReward = totalReward/times
         if aveReward >= maxReward:

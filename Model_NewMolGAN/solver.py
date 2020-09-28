@@ -11,7 +11,7 @@ from torchvision.utils import save_image
 from utilsGAN import *
 from models import Generator, Discriminator
 from dataGAN.sparse_molecular_dataset import SparseMolecularDataset
-from rewardUtils import getConnectivityReward, getTreeReward, getDistributionReward
+from rewardUtils import getConnectivityReward, getTreeReward, getDistributionReward, getEdgeLengthReward, getEdgeCrossReward
 from tqdm import tqdm
 
 from sampleDIvideTree import *
@@ -209,22 +209,26 @@ class Solver(object):
         A_copy = A.cpu().detach().numpy().copy()
         X_copy = X.cpu().detach().numpy().copy()
 
-        rr += 0.6*getTreeReward(A_copy, X_copy)
+        rr += 0.1 * getTreeReward(A_copy, X_copy)
 
-        rr += 0.4*getConnectivityReward(A_copy)
+        rr += 0.1 * getConnectivityReward(A_copy)
 
-        rr += getDistributionReward(A_copy, X_copy, self.distribution)
+        rr += 0.3 * getDistributionReward(A_copy, X_copy, self.distribution)
+
+        rr += 0.5 * getEdgeCrossReward(A_copy, X_copy)
 
         return rr.reshape(-1, 1)
 
     def evaReward(self, A_copy, X_copy):
         rr = 0.
 
-        rr += 0.6*getTreeReward(A_copy, X_copy)
+        rr += 0.1 * getTreeReward(A_copy, X_copy)
 
-        rr += 0.4*getConnectivityReward(A_copy)
+        rr += 0.1 * getConnectivityReward(A_copy)
 
-        rr += getDistributionReward(A_copy, X_copy, self.distribution)
+        rr += 0.3 * getDistributionReward(A_copy, X_copy, self.distribution)
+
+        rr += 0.5 * getEdgeCrossReward(A_copy, X_copy)
 
         return rr.reshape(-1, 1)
 
