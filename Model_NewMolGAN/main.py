@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # Training configuration.
     parser.add_argument('--batch_size', type=int, default=64, help='mini-batch size')
-    parser.add_argument('--num_iters', type=int, default=10000, help='number of total iterations for training D')
+    parser.add_argument('--num_iters', type=int, default=200000, help='number of total iterations for training D')
     parser.add_argument('--num_iters_decay', type=int, default=1000, help='number of iterations for decaying lr')
     parser.add_argument('--g_lr', type=float, default=0.0001, help='learning rate for G')
     parser.add_argument('--d_lr', type=float, default=0.0001, help='learning rate for D')

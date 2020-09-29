@@ -6,6 +6,9 @@ sys.path.append("..")
 from utils.divtree_gen import getMSTLenForReward
 import math
 
+from multiprocessing import Pool
+from multiprocessing.dummy import Pool as ThreadPool
+
 def getConnectivityReward(A):
     def calConnectivityRatio(A):
         G = dict()
@@ -186,9 +189,9 @@ def getEdgeLengthReward(A, X, isEva=False):
 
 
 def getEdgeCrossReward(A, X, isEva=False):
-    def iscross(line1, line2):
-        A, B = line1
-        C, D = line2
+    def iscross(pairData):
+        A, B = pairData[0]
+        C, D = pairData[1]
         AC = C - A
         AD = D - A
         BC = C - B
@@ -198,11 +201,14 @@ def getEdgeCrossReward(A, X, isEva=False):
         DA = - AD
         DB = - BD
         
-        return np.cross(AC,AD)*np.cross(BC,BD) <= 0 and np.cross(CA,CB)*np.cross(DA,DB) <= 0
+        return 1 if np.cross(AC,AD)*np.cross(BC,BD) < 0 and np.cross(CA,CB)*np.cross(DA,DB) < 0 else 0
 
-    def calEdgeCross(edges, nodes):
-        edges = edges.tolist()
-        nodes = nodes.tolist()
+    def calEdgeCross(pairData):
+        if (np.sum(pairData[0])-np.trace(pairData[0]))/ 2 > len(pairData[1]):
+            return 0
+
+        edges = pairData[0].tolist()
+        nodes = pairData[1].tolist()
         # ridges
         edgesList = []
         edgeSet = set()
@@ -217,56 +223,70 @@ def getEdgeCrossReward(A, X, isEva=False):
         crossNum = 0
         for i in range(len(edgesList)-1):
             for j in range(i+1, len(edgesList)):
-                if iscross(edgesList[i], edgesList[j]):
+                if iscross([edgesList[i], edgesList[j]]):
                     crossNum += 1
-        
         edgeNum = len(edgesList)
         if edgeNum == 0:
             return 0
-        return crossNum/edgeNum
+        return 1 - crossNum/edgeNum
 
     reward = []
     if isEva:
-        return calEdgeCross(A, X)
+        return calEdgeCross([A, X])
 
     if len(A.shape) == 2:
-        reward.append(1 - calEdgeCross(A, X))
+        reward.append(calEdgeCross([A, X]))
     else:
-        for i in range(len(A)): 
-            reward.append(1 - calEdgeCross(A[i], X[i]))
+        pool = ThreadPool(16)
+        tasks = [[A[i], X[i]] for i in range(len(A)) ]
+        reward = pool.map(calEdgeCross, tasks)
+        pool.close()
+        pool.join()
+        # reward.append(1 - calEdgeCross(A[i], X[i]))
     
     return np.array(reward)
 
-# A = [[
-#     [1,0,0,0,0],
-# 	[0,1,0,0,0],
-# 	[0,0,1,0,0],
-# 	[0,0,0,1,0],
-# 	[0,0,0,0,1]],
 
-#     [[0,1,0,0,0],
-# 	[0,0,1,0,0],
-# 	[1,0,0,0,0],
-# 	[0,0,0,0,1],
-# 	[0,0,0,1,0]]]
+def getWrangEdgeReward(A, X, isEva=False):
 
-# X = [[[0,0], [0,1], [0,2], [1,3], [1,0.9]],
-#     [[0,0], [0,1], [0,2], [1,3], [1,0.9]]]
+    def calWrangEdge(pairData):
+        edges = pairData[0].tolist()
+        nodes = pairData[1].tolist()
+        saddles = set()
+        for i in range(len(nodes)):
+            if nodes[i][0] == 0:
+                saddles.add(i)
+        
+        allEdge = 0
+        wrongEdge = 0
+        for i in range(len(edges)):
+            for j in range(len(edges[0])):
+                if i == j: continue
+                if edges[i][j] == 1:
+                    allEdge += 1
+                    if (i in saddles and j not in saddles) or (j in saddles and i not in saddles):
+                        continue
+                    else:
+                        wrongEdge += 1
+        
+       
+        if allEdge == 0:
+            return 0
+        return 1 - wrongEdge/allEdge
 
-# def testSubGraphNum(A):
-#     G = dict()
-#     for i in range(len(A)):
-#         G[i] = []
-#         for j in range(len(A[i])):
-#             if A[i][j] == 1:
-#                 G[i].append(j)
-#     groups = tc(G)
-#     groups:dict
-#     difGroups = set()
-#     for value in groups.values():
-#         difGroups.add(value)
-#     print(difGroups)
-#     return len(difGroups)
+    reward = []
+    if isEva:
+        return 1 - calWrangEdge([A, X])
 
-# print(testSubGraphNum(A[0]))
-# calRedundancyReward(A, X)
+    if len(A.shape) == 2:
+        reward.append(calWrangEdge([A, X]))
+    else:
+        # pool = ThreadPool(16)
+        tasks = [[A[i], X[i]] for i in range(len(A)) ]
+        reward = list(map(calWrangEdge, tasks))
+        # pool.close()
+        # pool.join()
+        # reward.append(1 - calEdgeCross(A[i], X[i]))
+    
+    return np.array(reward)
+

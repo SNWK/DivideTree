@@ -97,17 +97,20 @@ def compareIteration():
     for i in range(1, 21):
         solver.restore_model(i*10000)
         totalReward = 0
+        totalWrongEdgeRatio = 0
         for j in range(times):
             if j == 0:
-                _, _, reward = generateSample(31, draw=True, itr=i)
+                edges, nodes, reward = generateSample(31, draw=True, itr=i)
             else:
-                _, _, reward = generateSample(31, draw=False)
+                edges, nodes, reward = generateSample(31, draw=False)
             totalReward += reward
+            totalWrongEdgeRatio += getWrangEdgeReward(edges, nodes, isEva=True)
         aveReward = totalReward/times
+        avgWrongEdgeRatio = totalWrongEdgeRatio/times
         if aveReward >= maxReward:
             maxReward = aveReward
             maxIteration = i
-        print("Iteration: ", i*10000, "   Average Reward: ", aveReward)
+        print("Iteration: ", i*10000, "   Average Reward: ", aveReward, "   Average wrong edge ratio: ", avgWrongEdgeRatio)
     print("Max Iteration: ", maxIteration*10000, "   max Reward: ", maxReward)
     return maxIteration
 
