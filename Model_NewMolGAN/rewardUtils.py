@@ -8,6 +8,7 @@ import math
 
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
+import random
 
 def getConnectivityReward(A):
     def calConnectivityRatio(A):
@@ -221,10 +222,13 @@ def getEdgeCrossReward(A, X, isEva=False):
                     edgeSet.add((j,i))
         
         crossNum = 0
+        randomIdx = random.randint(0, len(edgesList) - 1)
         for i in range(len(edgesList)-1):
-            for j in range(i+1, len(edgesList)):
-                if iscross([edgesList[i], edgesList[j]]):
-                    crossNum += 1
+            if i == randomIdx:
+                continue
+            if iscross([edgesList[i], edgesList[randomIdx]]):
+                crossNum += 1
+                
         edgeNum = len(edgesList)
         if edgeNum == 0:
             return 0

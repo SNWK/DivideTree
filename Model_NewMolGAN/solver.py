@@ -209,13 +209,13 @@ class Solver(object):
         A_copy = A.cpu().detach().numpy().copy()
         X_copy = X.cpu().detach().numpy().copy()
 
-        rr += 0.2 * getTreeReward(A_copy, X_copy)
+        rr += 0.1 * getTreeReward(A_copy, X_copy)
 
-        rr += 0.2 * getConnectivityReward(A_copy)
+        rr += 0.1 * getConnectivityReward(A_copy)
 
-        rr += 0.3 * getDistributionReward(A_copy, X_copy, self.distribution)
+        rr += 0.2 * getDistributionReward(A_copy, X_copy, self.distribution)
 
-        # rr += 0.5 * getEdgeCrossReward(A_copy, X_copy)
+        rr += 0.3 * getEdgeCrossReward(A_copy, X_copy)
 
         rr += 0.3 * getWrangEdgeReward(A_copy, X_copy)
 
@@ -224,13 +224,13 @@ class Solver(object):
     def evaReward(self, A_copy, X_copy):
         rr = 0.
 
-        rr += 0.2 * getTreeReward(A_copy, X_copy)
+        rr += 0.1 * getTreeReward(A_copy, X_copy)
 
-        rr += 0.2 * getConnectivityReward(A_copy)
+        rr += 0.1 * getConnectivityReward(A_copy)
 
-        rr += 0.3 * getDistributionReward(A_copy, X_copy, self.distribution)
+        rr += 0.2 * getDistributionReward(A_copy, X_copy, self.distribution)
 
-        # rr += 0.5 * getEdgeCrossReward(A_copy, X_copy)
+        rr += 0.3 * getEdgeCrossReward(A_copy, X_copy)
 
         rr += 0.3 * getWrangEdgeReward(A_copy, X_copy)
 

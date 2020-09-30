@@ -17,4 +17,4 @@ def generate(nums, saddleSize, filepath):
     xdif, ydif = testSampler.getXYavgDif()
 
 if __name__ == "__main__":
-    generate(2000, 15, 'dems/andes_peru.txt')
+    generate(3000, 15, 'dems/andes_peru.txt')
