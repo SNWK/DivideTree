@@ -7,3 +7,4 @@ prominence-p100.txt
 *.data
 *.log
 *.pyc
+*.json

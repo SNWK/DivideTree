@@ -12,8 +12,8 @@ def generate(nums, saddleSize, filepath):
     for i in tqdm(range(nums)):
         L, A, X = testSampler.sampleTree(saddleSize)
         allTrees.append([L, A, X])
-        with open('dataGAN/data31.pkl', 'wb') as f:
-            pickle.dump(allTrees, f, pickle.HIGHEST_PROTOCOL)
+    with open('dataGAN/data31.pkl', 'wb') as f:
+        pickle.dump(allTrees, f, pickle.HIGHEST_PROTOCOL)
     xdif, ydif = testSampler.getXYavgDif()
 
 if __name__ == "__main__":
