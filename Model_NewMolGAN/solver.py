@@ -228,7 +228,7 @@ class Solver(object):
 
         rr += 0.1 * getConnectivityReward(A_copy)
 
-        rr += 0.2 * getDistributionReward(A_copy, X_copy, self.distribution)
+        # rr += 0.2 * getDistributionReward(A_copy, X_copy, self.distribution)
 
         rr += 0.3 * getEdgeCrossReward(A_copy, X_copy)
 
@@ -428,7 +428,6 @@ class Solver(object):
             # print(A.data.cpu().numpy())
             # print(nodes_logits.data.cpu().numpy())
             self.drawTree(A.data.cpu().numpy(), nodes_hat.data.cpu().numpy()[0])
-
 
     def drawTree(self, edges, nodes, itr=200000):
         fig = plt.figure()

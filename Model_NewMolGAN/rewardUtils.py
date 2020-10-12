@@ -222,17 +222,18 @@ def getEdgeCrossReward(A, X, isEva=False):
                     edgeSet.add((j,i))
         
         crossNum = 0
-        randomIdx = random.randint(0, len(edgesList) - 1)
-        for i in range(len(edgesList)-1):
-            if i == randomIdx:
-                continue
-            if iscross([edgesList[i], edgesList[randomIdx]]):
-                crossNum += 1
+        for times in range(2):
+            randomIdx = random.randint(0, len(edgesList) - 1)
+            for i in range(len(edgesList)-1):
+                if i == randomIdx:
+                    continue
+                if iscross([edgesList[i], edgesList[randomIdx]]):
+                    crossNum += 1
                 
         edgeNum = len(edgesList)
         if edgeNum == 0:
             return 0
-        return 1 - crossNum/edgeNum
+        return 1 - crossNum/2*edgeNum
 
     reward = []
     if isEva:

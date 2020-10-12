@@ -94,7 +94,7 @@ def compareIteration():
     maxIteration = 0
     maxReward = -100
     times = 100
-    for i in range(1, 21):
+    for i in tqdm(range(1, 41)) :
         solver.restore_model(i*10000)
         totalReward = 0
         totalWrongEdgeRatio = 0

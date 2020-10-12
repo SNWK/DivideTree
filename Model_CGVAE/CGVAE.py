@@ -440,7 +440,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         cross_entropy_losses = cross_entropy_losses.write(idx, iteration_loss)
         edge_predictions = edge_predictions.write(idx, tf.nn.softmax(edge_logits))
         edge_type_predictions = edge_type_predictions.write(idx, edge_type_probs)
-        return (idx+1, cross_entropy_losses, edge_predictions, edge_type_predictions)
+        return (idx+1, cross_entropy_losses, edge_predictions, edge_type_predictions) # why is idx+1
 
     def construct_logit_matrices(self):
         v = self.placeholders['num_vertices']
@@ -457,6 +457,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         cross_entropy_losses = tf.TensorArray(dtype=tf.float32, size=self.placeholders['max_iteration_num'])
         edge_predictions= tf.TensorArray(dtype=tf.float32, size=self.placeholders['max_iteration_num'])
         edge_type_predictions = tf.TensorArray(dtype=tf.float32, size=self.placeholders['max_iteration_num'])
+
+        # why pass idx=0 to self.generate_cross_entropy every time, seems update nothing
         idx_final, cross_entropy_losses_final, edge_predictions_final,edge_type_predictions_final=\
             tf.while_loop(lambda idx, cross_entropy_losses,edge_predictions,edge_type_predictions: idx < self.placeholders['max_iteration_num'],
             self.generate_cross_entropy,
@@ -469,7 +471,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         # final cross entropy losses
         cross_entropy_losses_final = cross_entropy_losses_final.stack()
         self.ops['cross_entropy_losses'] = tf.transpose(cross_entropy_losses_final, [1,0]) # [b, es]
-
+        
+        # FC
         # Logits for node symbols
         self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(self.ops['z_sampled'],[-1, h_dim]), self.weights['node_symbol_weights']) + 
                                                   self.weights['node_symbol_biases'], [-1, v, self.params['num_symbols']])
