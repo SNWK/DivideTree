@@ -99,7 +99,7 @@ class DivideTreeModel(object):
             self.max_num_vertices = max(self.max_num_vertices, max([v for e in g['graph'] for v in [e[0], e[2]]]))
             
         self.num_edge_types = 1
-        self.annotation_size = max(self.annotation_size, len(data[0]["node_features"][0]))
+        self.annotation_size = 3 # max(self.annotation_size, len(data[0]["node_features"][0]))
 
         return self.process_raw_graphs(data, is_training_data, file_name)
 

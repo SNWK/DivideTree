@@ -33,6 +33,7 @@ def dataset_info(dataset): #qm9, zinc, cep
         return { 'atom_types': ["S", "P"],
                  'maximum_valence': {0: 4, 1: 4},
                  'number_to_atom': {0: "S", 1: "P"},
+                 'node_feature_nums': 3,
                  'bucket_sizes': np.array(list(range(4, 31, 2)) + [31])
                }
     elif dataset=='qm9':
@@ -181,12 +182,13 @@ def make_dir(path):
 
 # sample node symbols based on node predictions
 def sample_node_symbol(all_node_symbol_prob, all_lengths, dataset):
+    # all_node_symbol_prob -> predict feature 
     # kk: change to node feature
     all_node_symbol=[]
     for graph_idx, graph_prob in enumerate(all_node_symbol_prob):
         node_symbol=[]
         for node_idx in range(all_lengths[graph_idx]):
-            symbol=np.random.choice(np.arange(len(dataset_info(dataset)['atom_types'])), p=graph_prob[node_idx])
+            symbol=graph_prob[node_idx] # np.random.choice(np.arange(len(dataset_info(dataset)['atom_types'])), p=graph_prob[node_idx])
             node_symbol.append(symbol)
         all_node_symbol.append(node_symbol)
     return all_node_symbol
@@ -230,7 +232,8 @@ def bfs_distance(start, adj_list, is_dense=False):
     return [(start, node, d) for node, d in distances.items()]
 
 def get_initial_valence(node_symbol, dataset):
-    return [dataset_info(dataset)['maximum_valence'][s] for s in node_symbol]
+    # kk: todo delete this
+    return [999 for s in node_symbol]
 
 def add_atoms(new_tree:DivideTree, node_symbol, dataset):
     # kk: add node to dividetree
@@ -339,45 +342,9 @@ def to_graph(d, dataset):
     edges = []
     nodes = []
     for e in d["graph"]:
-        if d["node_features"][e[0]][0] == 1:
-            # saddles
-            edges.append((0, 0, 1))
-        else:
-            edges.append((1, 0, 0))
-    
-    for n in d["node_features"]:
-        nodes.append(n[:2])
-    return nodes, edges
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return [], []
-    # Kekulize it
-    if need_kekulize(mol):
-        rdmolops.Kekulize(mol)
-        if mol is None:
-            return None, None
-    # remove stereo information, such as inward and outward edges
-    Chem.RemoveStereochemistry(mol)
+        edges.append((d["node_features"][e[0]], 0, d["node_features"][e[2]]))
 
-    edges = []
-    nodes = []
-    for bond in mol.GetBonds():
-        edges.append((bond.GetBeginAtomIdx(), bond_dict[str(bond.GetBondType())], bond.GetEndAtomIdx()))
-        assert bond_dict[str(bond.GetBondType())] != 3
-    for atom in mol.GetAtoms():
-        if dataset=='qm9' or dataset=="cep":
-            nodes.append(onehot(dataset_info(dataset)['atom_types'].index(atom.GetSymbol()), len(dataset_info(dataset)['atom_types'])))
-        elif dataset=='zinc': # transform using "<atom_symbol><valence>(<charge>)"  notation
-            symbol = atom.GetSymbol()
-            valence = atom.GetTotalValence()
-            charge = atom.GetFormalCharge()
-            atom_str = "%s%i(%i)" % (symbol, valence, charge)
-            
-            if atom_str not in dataset_info(dataset)['atom_types']:
-                print('unrecognized atom type %s' % atom_str)
-                return [], []
-
-            nodes.append(onehot(dataset_info(dataset)['atom_types'].index(atom_str), len(dataset_info(dataset)['atom_types'])))
+    nodes = d["node_features"]
 
     return nodes, edges
 

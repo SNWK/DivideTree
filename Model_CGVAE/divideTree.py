@@ -39,42 +39,59 @@ class DivideTree():
         # True: has ring
         return not no_ring
     
-    def visualize(path):
+    def getSaddlesPeakInfo(self):
+        """
+        assume the first node is saddles
+        """
+        saddleCoords = [self.nodes[0][:2]]
+        peakCoords = []
+        saddleElevs = [self.nodes[0][2]]
+        peakElevs = []
+        visited = [0]*len(self.nodes)
+        issaddle = [0]*len(self.nodes)
+        issaddle[0] = 1, visited[0] = 1, queue = [0]
+        node_neighbors = collections.defaultdict(list)
+        for e in self.edges:
+            node_neighbors[e[0]].append(e[1])
+            node_neighbors[e[1]].append(e[0])
+        while queue is not []:
+            current_node = queue.pop()
+            neighbors = node_neighbors[current_node]
+            isPeak = True
+            if issaddle[current_node] == 0:
+                # neighbors are saddles
+                isPeak = False
+            for ne in neighbors:
+                if visited[ne] == 0:
+                    visited[ne] = 1
+                    if isPeak:
+                        peakCoords.append(self.nodes[ne][:2])
+                        peakElevs.append(self.nodes[ne][2])
+                    else:
+                        issaddle[ne] = 1
+                        saddleCoords.append(self.nodes[ne][:2])
+                        saddleElevs.append(self.nodes[ne][2])
+                    queue.append(ne)
+
+        return saddleCoords, saddleElevs, peakCoords, peakElevs
+
+
+    def visualize(self, path):
         fig = plt.figure()
         ax = fig.add_subplot(111)    
-        
-        saddleCoords = []
-        peakCoords = []
-        peakElevs = []
-        for i in range(nodes.shape[0]):
-            tp, lati, longi, ele = nodes[i]
-            if tp == 0:
-                # saddle
-                saddleCoords.append([lati, longi])
-            else:
-                # peaks
-                peakCoords.append([lati, longi])
-                peakElevs.append(ele)
-        
+        saddleCoords, saddleElevs, peakCoords, peakElevs = self.getSaddlesPeakInfo()
         saddleCoords = np.array(saddleCoords)
         peakCoords = np.array(peakCoords)
         peakElevs = np.array(peakElevs)
-
         # plot ridges
-        for i in range(edges.shape[0]):
-            for j in range(edges.shape[1]):
-                if i == j: continue
-                if edges[i][j] == 1:
-                    p1 = nodes[i]
-                    p2 = nodes[j]
-                    ax.plot([p1[1], p2[1]], [p1[2], p2[2]], color='r', linewidth=1, zorder=1)
-        
+        for e in self.edges:
+            p1 = self.nodes[e[0]]
+            p2 = self.nodes[e[1]]
+            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color='r', linewidth=1, zorder=1)
         # plot peaks
         ax.scatter(peakCoords[:,0], peakCoords[:,1], marker='^', zorder=3, s=20*peakElevs/peakElevs.max(), c='white', edgecolors=(1,0.75,0,1), linewidths=1)
-
         # plot saddles
         ax.scatter(saddleCoords[:,0], saddleCoords[:,1], marker='o', c='white', edgecolors=(146/255, 208/255, 80/255, 1), s=6, zorder=2)
-                    
-        plt.savefig('test/testimg' + str(itr) + '.png')
+        plt.savefig(path)
 
-        
+    

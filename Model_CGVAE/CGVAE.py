@@ -593,7 +593,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         
         incremental_results, raw_data=self.calculate_incremental_results(raw_data, bucket_sizes, file_name)
         bucketed = defaultdict(list)
-        x_dim = len(raw_data[0]["node_features"][0])
+        x_dim = len(raw_data[0]["node_features"][0]) - 1 # don't want type here
 
         for d, (incremental_adj_mat,distance_to_others,node_sequence,edge_type_masks,edge_type_labels,local_stop, edge_masks, edge_labels, overlapped_edge_features)\
                             in zip(raw_data, incremental_results):
