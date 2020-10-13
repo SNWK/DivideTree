@@ -16,6 +16,8 @@ import sascorer
 from rdkit.Chem import Crippen
 from rdkit.Chem import QED
 
+from divideTree import DivideTree
+
 SMALL_NUMBER = 1e-7
 LARGE_NUMBER= 1e10
 
@@ -179,6 +181,7 @@ def make_dir(path):
 
 # sample node symbols based on node predictions
 def sample_node_symbol(all_node_symbol_prob, all_lengths, dataset):
+    # kk: change to node feature
     all_node_symbol=[]
     for graph_idx, graph_prob in enumerate(all_node_symbol_prob):
         node_symbol=[]
@@ -197,25 +200,17 @@ def load(file_name):
         return pickle.load(f)    
 
 # generate a new feature on whether adding the edges will generate more than two overlapped edges for rings
-def get_overlapped_edge_feature(edge_mask, color, new_mol):
+def get_overlapped_edge_feature(edge_mask, color, new_mol:DivideTree):
+    # kk: can change to return or pair which can lead to cycles
     overlapped_edge_feature=[]
     for node_in_focus, neighbor in edge_mask:
         if color[neighbor] == 1:
             # attempt to add the edge
-            new_mol.AddBond(int(node_in_focus), int(neighbor), number_to_bond[0])
+            new_mol.addBond(int(node_in_focus), int(neighbor))
             # Check whether there are two cycles having more than two overlap edges
-            try:
-                ssr = Chem.GetSymmSSSR(new_mol)
-            except:
-                ssr = []
-            overlap_flag = False
-            for idx1 in range(len(ssr)):
-                for idx2 in range(idx1+1, len(ssr)):
-                    if len(set(ssr[idx1]) & set(ssr[idx2])) > 2:
-                        overlap_flag=True
-            # remove that edge
-            new_mol.RemoveBond(int(node_in_focus), int(neighbor))
-            if overlap_flag:
+            hasRings = new_mol.checkRings()
+            new_mol.removeBond(int(node_in_focus), int(neighbor))
+            if hasRings:
                 overlapped_edge_feature.append((node_in_focus, neighbor))
     return overlapped_edge_feature
 
@@ -237,17 +232,13 @@ def bfs_distance(start, adj_list, is_dense=False):
 def get_initial_valence(node_symbol, dataset):
     return [dataset_info(dataset)['maximum_valence'][s] for s in node_symbol]
 
-def add_atoms(new_mol, node_symbol, dataset):
-    for number in node_symbol:
-        if dataset=='qm9' or dataset=='cep':
-            idx=new_mol.AddAtom(Chem.Atom(dataset_info(dataset)['number_to_atom'][number]))
-        elif dataset=='zinc':
-            new_atom = Chem.Atom(dataset_info(dataset)['number_to_atom'][number])            
-            charge_num=int(dataset_info(dataset)['atom_types'][number].split('(')[1].strip(')'))
-            new_atom.SetFormalCharge(charge_num)
-            new_mol.AddAtom(new_atom)
+def add_atoms(new_tree:DivideTree, node_symbol, dataset):
+    # kk: add node to dividetree
+    for node_feature in node_symbol:
+        new_tree.addNodes(node_feature)
 
 def visualize_mol(path, new_mol):
+    # kk: output/draw the dividetree
     AllChem.Compute2DCoords(new_mol)
     print(path)
     Draw.MolToFile(new_mol,path)
