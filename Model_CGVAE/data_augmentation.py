@@ -106,7 +106,7 @@ def construct_incremental_graph(dataset, edges, max_n_vertices, real_n_vertices,
     # Construct a graph object using the edges
     graph=defaultdict(list)
     for src, edge_type, dst in edges:
-        graph[src].append((dst, edge_type))
+        graph[src].append([dst, edge_type])
     # Breadth first search over the molecule 
     # color 0: have not found 1: in the queue 2: searched already
     color = [0] * max_n_vertices
@@ -135,7 +135,7 @@ def construct_incremental_graph(dataset, edges, max_n_vertices, real_n_vertices,
     # record the incremental molecule
     new_mol = DivideTree()
     # Add atoms
-    new_mol.addNodes(sample_node_symbol([node_symbol], [len(node_symbol)], dataset)[0], dataset)
+    new_mol.addNodes(sample_node_symbol([node_symbol], [len(node_symbol)], dataset)[0])
     # calculate keep probability
     sample_transition_count= real_n_vertices + len(edges)/2
     keep_prob= float(sample_transition_count)/((real_n_vertices + len(edges)/2) * params["bfs_path_count"])   # to form a binomial distribution
@@ -158,10 +158,10 @@ def construct_incremental_graph(dataset, edges, max_n_vertices, real_n_vertices,
                 up_to_date_adj_mat=genereate_incremental_adj(
                                    up_to_date_adj_mat, node_in_focus, neighbor, edge_type)
                 # suppose the edge is selected and update valences after adding the 
-                valences[node_in_focus]-=(edge_type + 1)
-                valences[neighbor]-=(edge_type + 1)
+                # valences[node_in_focus]-=(edge_type + 1)
+                # valences[neighbor]-=(edge_type + 1)
                 # update the incremental mol
-                new_mol.addNodes(int(node_in_focus), int(neighbor))
+                new_mol.addBond(int(node_in_focus), int(neighbor))
             # Explore neighbor nodes
             if color[neighbor]==0:
                 queue.append(neighbor)

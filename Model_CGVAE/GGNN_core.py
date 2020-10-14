@@ -41,6 +41,7 @@ class DivideTreeModel(object):
         # Get which dataset in use
         self.params['dataset']=dataset=args.get('--dataset')
         # Number of atom types of this dataset
+        # kk: todo del num_symbols
         self.params['num_symbols']=2 #len(dataset_info(dataset)["atom_types"])
         # x, y, ele
         self.params['num_features']=3
@@ -91,6 +92,7 @@ class DivideTreeModel(object):
             data = json.load(f)
 
         restrict = self.args.get("--restrict_data")
+        # restrict = 200
         if restrict is not None and restrict > 0:
             data = data[:restrict]
 
@@ -215,7 +217,7 @@ class DivideTreeModel(object):
     def run_epoch(self, epoch_name: str, epoch_num, data, is_training: bool):
         loss = 0
         start_time = time.time()
-        processed_graphs = 0
+        processed_graphs = 0.0001
         batch_iterator = ThreadedIterator(self.make_minibatch_iterator(data, is_training), max_queue_size=5)
 
         for step, batch_data in enumerate(batch_iterator):

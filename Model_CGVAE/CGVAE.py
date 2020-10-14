@@ -22,7 +22,7 @@ import sys, traceback
 import pdb
 import json
 import os
-from GGNN_core import ChemModel, DivideTreeModel
+from GGNN_core import DivideTreeModel
 import utils
 from utils import *
 import pickle
@@ -130,7 +130,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         self.placeholders['adjacency_matrix'] = tf.placeholder(tf.float32,
                                                     [None, self.num_edge_types, None, None], name="adjacency_matrix")     # [b, e, v, v]
         # labels for node symbol prediction
-        self.placeholders['node_symbols'] = tf.placeholder(tf.float32, [None, None, self.params['num_symbols']]) # [b, v, edge_type]
+        self.placeholders['node_symbols'] = tf.placeholder(tf.float32, [None, None, self.params['num_features']]) # [b, v, edge_type]
         # node symbols used to enhance latent representations
         self.placeholders['latent_node_symbols'] = tf.placeholder(tf.float32, 
                                                       [None, None, self.params['hidden_size']], name='latent_node_symbol') # [b, v, h]
@@ -201,8 +201,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         self.weights['variance_biases'] = tf.Variable(np.zeros([1, h_dim]).astype(np.float32))
 
         # The weights for generating nodel symbol logits    
-        self.weights['node_symbol_weights'] = tf.Variable(glorot_init([h_dim, self.params['num_symbols']]))
-        self.weights['node_symbol_biases'] = tf.Variable(np.zeros([1, self.params['num_symbols']]).astype(np.float32))
+        self.weights['node_symbol_weights'] = tf.Variable(glorot_init([h_dim, self.params['num_features']]))
+        self.weights['node_symbol_biases'] = tf.Variable(np.zeros([1, self.params['num_features']]).astype(np.float32))
         
         feature_dimension=6*expanded_h_dim
         # record the total number of features
@@ -226,15 +226,17 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         self.weights['qed_weights'] = tf.Variable(glorot_init([h_dim, h_dim]))
         self.weights['qed_biases'] = tf.Variable(np.zeros([1, h_dim]).astype(np.float32))
         # use node embeddings
-        self.weights["node_embedding"]= tf.Variable(glorot_init([self.params["num_symbols"], h_dim]))
-        
+        self.weights["node_embedding"]= tf.Variable(glorot_init([self.params["num_features"], h_dim]))
+        self.weights['node_feature_embedding'] = MLP(self.params['num_features'], h_dim, [], 1)
         # graph state mask
         self.ops['graph_state_mask']= tf.expand_dims(self.placeholders['node_mask'], 2)
 
-    # transform one hot vector to dense embedding vectors
-    def get_node_embedding_state(self, one_hot_state):
-        node_nums=tf.argmax(one_hot_state, axis=2)
-        return tf.nn.embedding_lookup(self.weights["node_embedding"], node_nums) * self.ops['graph_state_mask']
+    # transformnode_features to dense embedding vectors
+    def get_node_embedding_state(self, node_features):
+        # kk: change one-hot to MLP embedding
+        result = tf.map_fn(fn=lambda t: self.weights['node_feature_embedding'](t[:,:self.params['num_features']]), elems=node_features)
+
+        return result * self.ops['graph_state_mask']
 
     def compute_final_node_representations_with_residual(self, h, adj, scope_name): # scope_name: _encoder or _decoder
         # h: initial representation, adj: adjacency matrix, different GNN parameters for encoder and decoder
@@ -334,7 +336,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
     def generate_cross_entropy(self, idx, cross_entropy_losses, edge_predictions, edge_type_predictions):
         v = self.placeholders['num_vertices']
         h_dim = self.params['hidden_size']
-        num_symbols = self.params['num_symbols']
+        num_symbols = self.params['num_features']
         batch_size = tf.shape(self.placeholders['initial_node_representation'])[0]
         # Use latent representation as decoder GNN'input 
         filtered_z_sampled = self.ops["initial_repre_for_decoder"]                                      # [b, v, h+h]
@@ -474,8 +476,9 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         
         # FC
         # Logits for node symbols
+        # kk: hidden-size -> size
         self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(self.ops['z_sampled'],[-1, h_dim]), self.weights['node_symbol_weights']) + 
-                                                  self.weights['node_symbol_biases'], [-1, v, self.params['num_symbols']])
+                                                  self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
 
     def construct_loss(self):
         v = self.placeholders['num_vertices']
@@ -487,10 +490,13 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         kl_loss = 1 + self.ops['logvariance'] - tf.square(self.ops['mean']) - tf.exp(self.ops['logvariance'])
         kl_loss = tf.reshape(kl_loss, [-1, v, h_dim]) * self.ops['graph_state_mask'] 
         self.ops['kl_loss'] = -0.5 * tf.reduce_sum(kl_loss, [1,2])
-        # Node symbol loss
-        self.ops['node_symbol_prob'] = tf.nn.softmax(self.ops['node_symbol_logits'])
-        self.ops['node_symbol_loss'] = -tf.reduce_sum(tf.log(self.ops['node_symbol_prob'] + SMALL_NUMBER) * 
-                                                      self.placeholders['node_symbols'], axis=[1,2])
+        # Node symbol loss 
+        # pre
+        self.ops['node_symbol_prob'] = self.ops['node_symbol_logits']
+        # kk: change to mse loss
+        # mseloss = tf.losses.mean_squared_error(self.placeholders['node_symbols'], self.ops['node_symbol_pre'])
+        self.ops['node_symbol_loss'] = tf.losses.mean_squared_error(self.placeholders['node_symbols'], self.ops['node_symbol_logits'])
+        #tf.reduce_sum(tf.losses.mean_squared_error(self.placeholders['node_symbols'], self.ops['node_symbol_pre']) , axis=[1,2])
         # Add in the loss for calculating QED
         for (internal_id, task_id) in enumerate(self.params['task_ids']):
             with tf.variable_scope("out_layer_task%i" % task_id):
@@ -589,11 +595,12 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         return incremental_results, new_raw_data
 
     # ----- Data preprocessing and chunking into minibatches:
-    def process_raw_graphs(self, raw_data, is_training_data, file_name):
-        
+    def process_raw_graphs(self, raw_data, is_training_data, file_name, bucket_sizes=None):
+        if bucket_sizes is None:
+            bucket_sizes = dataset_info(self.params["dataset"])["bucket_sizes"]
         incremental_results, raw_data=self.calculate_incremental_results(raw_data, bucket_sizes, file_name)
         bucketed = defaultdict(list)
-        x_dim = len(raw_data[0]["node_features"][0]) - 1 # don't want type here
+        x_dim = len(raw_data[0]["node_features"][0]) # don't want type here
 
         for d, (incremental_adj_mat,distance_to_others,node_sequence,edge_type_masks,edge_type_labels,local_stop, edge_masks, edge_labels, overlapped_edge_features)\
                             in zip(raw_data, incremental_results):
@@ -639,7 +646,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
 
     def pad_annotations(self, annotations):
         return np.pad(annotations,
-                       pad_width=[[0, 0], [0, 0], [0, self.params['hidden_size'] - self.params["num_symbols"]]],
+                       pad_width=[(0, 0), (0, 0), (0, self.params['hidden_size'] - self.params["num_features"])],
                        mode='constant')
 
     def make_batch(self, elements, maximum_vertice_num):
@@ -718,7 +725,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
             node_sequence=np.zeros((1,1,1))
             edge_type_masks=np.zeros((1,1,self.num_edge_types,1))
             edge_masks=np.zeros((1,1,1))
-            latent_node_symbol=np.zeros((1,1,self.params["num_symbols"]))
+            latent_node_symbol=np.zeros((1,1,self.params["num_features"]))
         return {
                 self.placeholders['z_prior']: random_normal_states, # [1, v, h]
                 self.placeholders['incre_adj_mat']: incre_adj_mat, # [1, 1, e, v, v]
@@ -745,14 +752,14 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
             }
 
     def get_node_symbol(self, batch_feed_dict):  
-        fetch_list = [self.ops['node_symbol_prob']]
+        fetch_list = [self.ops['node_symbol_logits']]
         result = self.sess.run(fetch_list, feed_dict=batch_feed_dict)
         return result[0]
 
     def node_symbol_one_hot(self, sampled_node_symbol, real_n_vertices, max_n_vertices):
         one_hot_representations=[]
         for idx in range(max_n_vertices):
-            representation = [0] * self.params["num_symbols"]
+            representation = [0] * self.params["num_features"]
             if idx < real_n_vertices:
                 atom_type=sampled_node_symbol[idx]
                 representation[atom_type]=1
@@ -763,10 +770,9 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                              sampled_node_symbol, real_n_vertices, random_normal_states,
                              elements, max_n_vertices):
         # New molecule
-        new_mol = Chem.MolFromSmiles('')
-        new_mol = Chem.rdchem.RWMol(new_mol)
+        new_mol = DivideTree()
         # Add atoms
-        add_atoms(new_mol, sampled_node_symbol, self.params["dataset"])
+        new_mol.addNodes(sampled_node_symbol)
         # Breadth first search over the molecule
         queue=deque([initial_idx])
         # color 0: have not found 1: in the queue 2: searched already
@@ -820,10 +826,11 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                 # update log prob
                 total_log_prob+=np.log(edge_type_probs[0, :, neighbor][bond]+SMALL_NUMBER)
                 #update valences
-                valences[node_in_focus] -= (bond+1)
-                valences[neighbor] -= (bond+1)
+                # kk: no need to care about valences
+                # valences[node_in_focus] -= (bond+1)
+                # valences[neighbor] -= (bond+1)
                 #add the bond
-                new_mol.AddBond(int(node_in_focus), int(neighbor), number_to_bond[bond])
+                new_mol.addBond(int(node_in_focus), int(neighbor))
                 # add the edge to increment adj list
                 incre_adj_list[node_in_focus].append((neighbor, bond))
                 incre_adj_list[neighbor].append((node_in_focus, bond))
@@ -833,8 +840,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                     color[neighbor]=1                
             color[node_in_focus]=2    # explored
         # Remove unconnected node     
-        remove_extra_nodes(new_mol)
-        new_mol=Chem.MolFromSmiles(Chem.MolToSmiles(new_mol))
+        new_mol.remove_extra_nodes()
         return new_mol, total_log_prob
 
     def gradient_ascent(self, random_normal_states, derivative_z_sampled):        
@@ -910,6 +916,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
             elif dataset=='cep' and new_mol is not None:
                 all_mol.append((np.sum(shape_count(self.params["dataset"], True,
                                 [Chem.MolToSmiles(new_mol)])[1][2:]), total_log_prob, new_mol))
+            elif dataset=='data19' and new_mol is not None:
+                all_mol.append([new_mol.getTreeScore(), total_log_prob, new_mol])
         # select one out
         best_mol = select_best(all_mol)
         # nothing generated
@@ -917,12 +925,10 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
             return
         # visualize it 
         make_dir('visualization_%s' % dataset)
-        visualize_mol('visualization_%s/%d_%d.png' % (dataset, count, step), best_mol)
+        best_mol.visualize('visualization_%s/%d_%d.png' % (dataset, count, step))
         # record the best molecule
-        generated_all_similes.append(Chem.MolToSmiles(best_mol))
+        generated_all_similes.append(best_mol)
         dump('generated_smiles_%s' % (dataset), generated_all_similes)
-        print("Real QED value")
-        print(QED.qed(best_mol))
         if len(generated_all_similes) >= self.params['number_of_generation']:
             print("generation done")
             exit(0)
@@ -931,7 +937,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         maximum_length=bucket_size+self.params["compensate_num"]
         real_length=get_graph_length([elements['mask']])[0]+self.params["compensate_num"]
         elements['mask']=[1]*real_length + [0]*(maximum_length-real_length)
-        elements['init']=np.zeros((maximum_length, self.params["num_symbols"]))
+        elements['init']=np.zeros((maximum_length, self.params["num_features"]))
         elements['adj_mat']=np.zeros((self.num_edge_types, maximum_length, maximum_length))
         return maximum_length
 
@@ -1015,7 +1021,7 @@ if __name__ == "__main__":
     args = docopt(__doc__)
     dataset=args.get('--dataset')
     try:
-        model = DenseGGNNChemModel(args)
+        model = DenseGGNNDivideTreeModel(args)
         evaluation = False
         if evaluation:
             model.example_evaluation()

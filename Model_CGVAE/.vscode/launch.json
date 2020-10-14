@@ -11,7 +11,7 @@
             "program": "CGVAE.py",
             "console": "integratedTerminal",
             "pythonPath": "/home/snwk/anaconda3/envs/cgvae/bin/python",
-            "args": ["--dataset", "data31"]
+            "args": ["--dataset", "data19"]
         }
     ]
 }

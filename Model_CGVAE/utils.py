@@ -29,7 +29,7 @@ number_to_bond= {0: Chem.rdchem.BondType.SINGLE, 1:Chem.rdchem.BondType.DOUBLE,
                  2: Chem.rdchem.BondType.TRIPLE, 3:Chem.rdchem.BondType.AROMATIC}
 
 def dataset_info(dataset): #qm9, zinc, cep
-    if dataset=='data31':
+    if dataset=='data19':
         return { 'atom_types': ["S", "P"],
                  'maximum_valence': {0: 4, 1: 4},
                  'number_to_atom': {0: "S", 1: "P"},
@@ -339,10 +339,7 @@ def count_atoms(dataset):
 
 
 def to_graph(d, dataset):
-    edges = []
-    nodes = []
-    for e in d["graph"]:
-        edges.append((d["node_features"][e[0]], 0, d["node_features"][e[2]]))
+    edges = d["graph"]
 
     nodes = d["node_features"]
 
@@ -604,7 +601,7 @@ def select_best(all_mol):
     # sort by shape
     all_mol=sorted(all_mol)
     best_shape=all_mol[-1][0]
-    all_mol=[(p, m) for s, p, m in all_mol if s==best_shape]
+    all_mol=[[p, m] for s, p, m in all_mol if s==best_shape]
     # sort by probs
     all_mol=sorted(all_mol)
     return all_mol[-1][1]
@@ -653,7 +650,7 @@ def edge_type_masks_to_dense(edge_type_masks, maximum_vertice_num, num_edge_type
     for mask_sparse in edge_type_masks:
         mask_dense=np.zeros([num_edge_types, maximum_vertice_num])
         for node_in_focus, neighbor, bond in mask_sparse:
-            mask_dense[bond][neighbor]=1
+            mask_dense[0][neighbor]=1
         new_edge_type_masks.append(mask_dense)
     return new_edge_type_masks #[number_iteration, 3, maximum_vertice_num]
 
@@ -662,7 +659,7 @@ def edge_type_labels_to_dense(edge_type_labels, maximum_vertice_num,num_edge_typ
     for labels_sparse in edge_type_labels:
         labels_dense=np.zeros([num_edge_types, maximum_vertice_num])
         for node_in_focus, neighbor, bond in labels_sparse:
-            labels_dense[bond][neighbor]= 1/float(len(labels_sparse)) # fix the probability bug here.
+            labels_dense[0][neighbor]= 1/float(len(labels_sparse)) # fix the probability bug here.
         new_edge_type_labels.append(labels_dense)
     return new_edge_type_labels #[number_iteration, 3, maximum_vertice_num]
 

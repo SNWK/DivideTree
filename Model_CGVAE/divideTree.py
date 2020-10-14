@@ -1,4 +1,6 @@
 import collections
+import matplotlib.pyplot as plt 
+import numpy as np
 
 class DivideTree():
     def __init__(self):
@@ -6,7 +8,10 @@ class DivideTree():
         self.edges = []
 
     def addNodes(self, node_feature):
-        self.nodes.append(node_feature)
+        if type(node_feature[0]) == list:
+            self.nodes += node_feature
+        else:
+            self.nodes.append(node_feature)
 
     def addBond(self, node_1, node_2):
         self.edges.append((node_1, node_2))
@@ -49,7 +54,7 @@ class DivideTree():
         peakElevs = []
         visited = [0]*len(self.nodes)
         issaddle = [0]*len(self.nodes)
-        issaddle[0] = 1, visited[0] = 1, queue = [0]
+        issaddle[0], visited[0], queue = 1, 1, [0]
         node_neighbors = collections.defaultdict(list)
         for e in self.edges:
             node_neighbors[e[0]].append(e[1])
@@ -93,5 +98,32 @@ class DivideTree():
         # plot saddles
         ax.scatter(saddleCoords[:,0], saddleCoords[:,1], marker='o', c='white', edgecolors=(146/255, 208/255, 80/255, 1), s=6, zorder=2)
         plt.savefig(path)
+    
+    def remove_extra_nodes(self):
+        connected = [0]*len(self.nodes)
+        for edge in self.edges:
+            connected[edge[0]] = 1
+            connected[edge[1]] = 1
 
+        mapR = dict()
+        new_nodes = []
+        new_edges = []
+
+        for i in range(len(self.nodes)):
+            if connected[i] == 1:
+                mapR[i] = len(new_nodes)
+                new_nodes.append(self.nodes[i])
+
+        for edge in self.edges:
+            new_edges.append((mapR[edge[0]], mapR[edge[1]]))
+        self.nodes, self.edges = new_nodes, new_edges
+
+    def getTreeScore(self):
+        # kk: TODO can be stronger
+        # should be discrete
+        nodes_num = len(self.nodes)
+        edges_num = len(self.edges)
+        score = nodes_num  - (edges_num + 1 - nodes_num)**2
+        score = 1 if score > nodes_num - 4 else 0
+        return score
     
