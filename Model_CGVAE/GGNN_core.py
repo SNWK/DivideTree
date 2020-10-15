@@ -218,7 +218,7 @@ class DivideTreeModel(object):
         loss = 0
         start_time = time.time()
         processed_graphs = 0.0001
-        batch_iterator = ThreadedIterator(self.make_minibatch_iterator(data, is_training), max_queue_size=5)
+        batch_iterator = ThreadedIterator(self.make_minibatch_iterator(data, is_training), max_queue_size=10)
 
         for step, batch_data in enumerate(batch_iterator):
             num_graphs = batch_data[self.placeholders['num_graphs']]

@@ -19,12 +19,7 @@ def generate(nums, saddleSize, filepath):
 
         d["node_features"] = []
         for node in X:
-            if node[0] == 0:
-                # saddles
-                d["node_features"].append([1, 0] + node[1:])
-            else:
-                # peaks
-                d["node_features"].append([0, 1] + node[1:])
+            d["node_features"].append(node[1:])
 
         d["graph"] = []
         for i in range(len(A)):
@@ -34,8 +29,8 @@ def generate(nums, saddleSize, filepath):
 
         allData.append(d)
 
-    with open('data31_valid.json', 'w') as f:
+    with open('molecules_valid_data19.json', 'w') as f:
         json.dump(allData, f)
 
 if __name__ == "__main__":
-    generate(1000, 15, 'dems/andes_peru.txt')
+    generate(1000, 9, 'dems/andes_peru.txt')

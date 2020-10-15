@@ -168,10 +168,7 @@ def check_validity(dataset):
 def get_graph_length(all_node_mask):
     all_lengths=[]
     for graph in all_node_mask:
-        if 0 in graph:
-            length=np.argmin(graph)
-        else:
-            length=len(graph)
+        length=len(graph)
         all_lengths.append(length)
     return all_lengths
 

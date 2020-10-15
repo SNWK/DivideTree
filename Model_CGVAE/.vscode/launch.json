@@ -11,7 +11,7 @@
             "program": "CGVAE.py",
             "console": "integratedTerminal",
             "pythonPath": "/home/snwk/anaconda3/envs/cgvae/bin/python",
-            "args": ["--dataset", "data19"]
+            "args": ["--dataset", "data19", "--restore", "6_data19.pickle", "--config", "{\"generation\": true}"]
         }
     ]
 }

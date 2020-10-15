@@ -68,13 +68,13 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
 
                         'random_seed': 0,            # fixed for reproducibility 
                        
-                        'batch_size': 8 if dataset=='zinc' or dataset=='cep' else 64,              
+                        'batch_size': 8 if dataset=='zinc' or dataset=='cep' else 8,              
                         "qed_trade_off_lambda": 10,
                         'prior_learning_rate': 0.05,
                         'stop_criterion': 0.01,
                         'num_epochs': 3 if dataset=='zinc' or dataset=='cep' else 10,
                         'epoch_to_generate': 3 if dataset=='zinc' or dataset=='cep' else 10,
-                        'number_of_generation': 30000,
+                        'number_of_generation': 100,
                         'optimization_step': 0,      
                         'maximum_distance': 50,
                         "use_argmax_generation": False,    # use random sampling or argmax during generation
@@ -104,9 +104,9 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                         'generation': False,        # only for generation
                         'use_graph': True,          # use gnn
                         "label_one_hot": False,     # one hot label or not
-                        "multi_bfs_path": False,    # whether sample several BFS paths for each molecule
-                        "bfs_path_count": 30,       
-                        "path_random_order": False, # False: canonical order, True: random order
+                        "multi_bfs_path": True,    # whether sample several BFS paths for each molecule
+                        "bfs_path_count": 10,       
+                        "path_random_order": True, # False: canonical order, True: random order
                         "sample_transition": False, # whether use transition sampling
                         'edge_weight_dropout_keep_prob': 1,
                         'check_overlap_edge': False,
@@ -452,8 +452,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         # Initial state: embedding
         latent_node_state= self.get_node_embedding_state(self.placeholders["latent_node_symbols"])
         # concat z_sampled with node symbols
-        filtered_z_sampled = tf.concat([self.ops['z_sampled'],
-                                       latent_node_state], axis=2) # [b, v, h + h]
+        filtered_z_sampled = tf.concat([self.ops['z_sampled'], latent_node_state], axis=2) # [b, v, h + h]
         self.ops["initial_repre_for_decoder"] = filtered_z_sampled
         # The tensor array used to collect the cross entropy losses at each step
         cross_entropy_losses = tf.TensorArray(dtype=tf.float32, size=self.placeholders['max_iteration_num'])
@@ -752,7 +751,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
             }
 
     def get_node_symbol(self, batch_feed_dict):  
-        fetch_list = [self.ops['node_symbol_logits']]
+        fetch_list = [self.ops['node_symbol_prob']]
         result = self.sess.run(fetch_list, feed_dict=batch_feed_dict)
         return result[0]
 
@@ -798,7 +797,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                 overlapped_edge_dense = overlapped_edge_features_to_dense([overlapped_edge_sparse],max_n_vertices) # [1, v]
                 incre_adj_mat = incre_adj_mat_to_dense([incre_adj_list], 
                     self.num_edge_types, max_n_vertices) # [1, e, v, v]
-                sampled_node_symbol_one_hot = self.node_symbol_one_hot(sampled_node_symbol, real_n_vertices, max_n_vertices)
+                sampled_node_symbol_one_hot = sampled_node_symbol #self.node_symbol_one_hot(sampled_node_symbol, real_n_vertices, max_n_vertices)
 
                 # get feed_dict
                 feed_dict=self.get_dynamic_feed_dict(elements, [sampled_node_symbol_one_hot],
@@ -939,6 +938,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         elements['mask']=[1]*real_length + [0]*(maximum_length-real_length)
         elements['init']=np.zeros((maximum_length, self.params["num_features"]))
         elements['adj_mat']=np.zeros((self.num_edge_types, maximum_length, maximum_length))
+        
         return maximum_length
 
     def generate_new_graphs(self, data): 

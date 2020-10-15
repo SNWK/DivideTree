@@ -8,3 +8,5 @@ prominence-p100.txt
 *.log
 *.pyc
 *.json
+*.pickle
+*.png

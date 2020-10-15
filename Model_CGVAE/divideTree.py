@@ -8,10 +8,12 @@ class DivideTree():
         self.edges = []
 
     def addNodes(self, node_feature):
-        if type(node_feature[0]) == list:
-            self.nodes += node_feature
-        else:
+        if len(node_feature) == 3:
             self.nodes.append(node_feature)
+        while len(node_feature[0]) != 3:
+            node_feature = node_feature[0]
+        self.nodes += node_feature
+            
 
     def addBond(self, node_1, node_2):
         self.edges.append((node_1, node_2))
@@ -59,7 +61,7 @@ class DivideTree():
         for e in self.edges:
             node_neighbors[e[0]].append(e[1])
             node_neighbors[e[1]].append(e[0])
-        while queue is not []:
+        while len(queue) != 0:
             current_node = queue.pop()
             neighbors = node_neighbors[current_node]
             isPeak = True
@@ -101,9 +103,11 @@ class DivideTree():
     
     def remove_extra_nodes(self):
         connected = [0]*len(self.nodes)
+        length = len(self.nodes)
         for edge in self.edges:
-            connected[edge[0]] = 1
-            connected[edge[1]] = 1
+            if edge[0] in range(len(self.nodes)) and edge[1] in range(len(self.nodes)):
+                connected[edge[0]] = 1
+                connected[edge[1]] = 1
 
         mapR = dict()
         new_nodes = []
@@ -115,7 +119,8 @@ class DivideTree():
                 new_nodes.append(self.nodes[i])
 
         for edge in self.edges:
-            new_edges.append((mapR[edge[0]], mapR[edge[1]]))
+            if edge[0] in mapR and edge[1] in mapR:
+                new_edges.append((mapR[edge[0]], mapR[edge[1]]))
         self.nodes, self.edges = new_nodes, new_edges
 
     def getTreeScore(self):
