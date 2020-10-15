@@ -50,6 +50,8 @@ class DivideTree():
         """
         assume the first node is saddles
         """
+        if len(self.nodes) == 0:
+            return [], [], [], []
         saddleCoords = [self.nodes[0][:2]]
         peakCoords = []
         saddleElevs = [self.nodes[0][2]]
@@ -87,6 +89,9 @@ class DivideTree():
         fig = plt.figure()
         ax = fig.add_subplot(111)    
         saddleCoords, saddleElevs, peakCoords, peakElevs = self.getSaddlesPeakInfo()
+        if len(saddleCoords) == 0:
+            plt.savefig(path)
+            return
         saddleCoords = np.array(saddleCoords)
         peakCoords = np.array(peakCoords)
         peakElevs = np.array(peakElevs)
@@ -132,3 +137,30 @@ class DivideTree():
         score = 1 if score > nodes_num - 4 else 0
         return score
     
+    def checkCrossed(self):
+        def iscross(pairData):
+            A, B = pairData[0]
+            C, D = pairData[1]
+            AC = C - A
+            AD = D - A
+            BC = C - B
+            BD = D - B
+            CA = - AC
+            CB = - BC
+            DA = - AD
+            DB = - BD
+            return 1 if np.cross(AC,AD)*np.cross(BC,BD) < 0 and np.cross(CA,CB)*np.cross(DA,DB) < 0 else 0
+        # check the last added edge
+        focus = self.edges[-1]
+        new_edge = [np.array([self.nodes[focus[0]][0], self.nodes[focus[0]][1]]), 
+                    np.array([self.nodes[focus[1]][0], self.nodes[focus[1]][1]])]
+        for idx in range(len(self.edges) - 1):
+            focus = self.edges[idx]
+            if focus[0] in self.edges[-1] or focus[1] in self.edges[-1]:
+                continue
+            tmp_edge = [np.array([self.nodes[focus[0]][0], self.nodes[focus[0]][1]]), 
+                        np.array([self.nodes[focus[1]][0], self.nodes[focus[1]][1]])]
+            if iscross([new_edge, tmp_edge]):
+                return True
+            
+        return False

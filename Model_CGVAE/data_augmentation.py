@@ -1,3 +1,4 @@
+from divideTree import DivideTree
 from utils import *
 from copy import deepcopy
 import random
@@ -6,7 +7,7 @@ import random
 # For a (node_in_focus, neighbor, edge_type) to be valid, neighbor's color < 2 and 
 # there is no edge so far between node_in_focus and neighbor and it satisfy the valence constraint
 # and node_in_focus != neighbor 
-def generate_mask(valences, adj_mat, color, real_n_vertices, node_in_focus, check_overlap_edge, new_mol):
+def generate_mask(valences, adj_mat, color, real_n_vertices, node_in_focus, check_overlap_edge, new_mol:DivideTree):
     edge_type_mask=[]
     edge_mask=[]
     for neighbor in range(real_n_vertices):
@@ -20,7 +21,7 @@ def generate_mask(valences, adj_mat, color, real_n_vertices, node_in_focus, chec
                 # attempt to add the edge
                 new_mol.addBond(int(node_in_focus), int(neighbor))
                 # Check cycles
-                overlap_flag = new_mol.checkRings()
+                overlap_flag = new_mol.checkRings() and new_mol.checkCrossed()
                 new_mol.removeBond(int(node_in_focus), int(neighbor))
                 if overlap_flag:
                     continue

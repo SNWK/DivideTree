@@ -74,7 +74,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                         'stop_criterion': 0.01,
                         'num_epochs': 3 if dataset=='zinc' or dataset=='cep' else 10,
                         'epoch_to_generate': 3 if dataset=='zinc' or dataset=='cep' else 10,
-                        'number_of_generation': 100,
+                        'number_of_generation': 10,
                         'optimization_step': 0,      
                         'maximum_distance': 50,
                         "use_argmax_generation": False,    # use random sampling or argmax during generation
@@ -88,7 +88,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                                 12: [0, 2, 4, 6, 8, 10],
                                 14: [0, 2, 4, 6, 8, 10, 12],
                             },
-                        'num_timesteps': 12,           # gnn propagation step
+                        'num_timesteps': 20,           # gnn propagation step
                         'hidden_size': 100,        
                         "kl_trade_off_lambda": 0.3,    # kl tradeoff
                         'learning_rate': 0.001, 
@@ -107,7 +107,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                         "multi_bfs_path": True,    # whether sample several BFS paths for each molecule
                         "bfs_path_count": 10,       
                         "path_random_order": True, # False: canonical order, True: random order
-                        "sample_transition": False, # whether use transition sampling
+                        "sample_transition": True, # whether use transition sampling
                         'edge_weight_dropout_keep_prob': 1,
                         'check_overlap_edge': False,
                         "truncate_distance": 10,
