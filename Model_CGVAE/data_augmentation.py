@@ -13,7 +13,7 @@ def generate_mask(valences, adj_mat, color, real_n_vertices, node_in_focus, chec
     for neighbor in range(real_n_vertices):
         if neighbor != node_in_focus and color[neighbor] < 2 and \
             not check_adjacent_sparse(adj_mat, node_in_focus, neighbor)[0]:
-            min_valence = min(valences[node_in_focus], valences[neighbor], 5)
+            min_valence = min(valences[node_in_focus], valences[neighbor], 1)
             # Check whether two cycles have more than two overlap edges here
             # the neighbor color = 1 and there are left valences and 
             # adding that edge will not cause overlap edges.
@@ -21,12 +21,12 @@ def generate_mask(valences, adj_mat, color, real_n_vertices, node_in_focus, chec
                 # attempt to add the edge
                 new_mol.addBond(int(node_in_focus), int(neighbor))
                 # Check cycles
-                overlap_flag = new_mol.checkRings() and new_mol.checkCrossed()
+                overlap_flag = new_mol.checkRings() #or new_mol.checkCrossed()
                 new_mol.removeBond(int(node_in_focus), int(neighbor))
                 if overlap_flag:
                     continue
             for v in range(min_valence):
-                assert v < 5
+                assert v < 1
                 # kk: how v works
                 edge_type_mask.append((node_in_focus, neighbor, v))
             # there might be an edge between node in focus and neighbor

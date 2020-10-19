@@ -13,6 +13,7 @@ Options:
     --restore FILE           File to restore weights from.
     --freeze-graph-model     Freeze weights of graph model components
 """
+from pickle import NONE
 from typing import Sequence, Any
 from docopt import docopt
 from collections import defaultdict, deque
@@ -74,8 +75,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                         'stop_criterion': 0.01,
                         'num_epochs': 3 if dataset=='zinc' or dataset=='cep' else 10,
                         'epoch_to_generate': 3 if dataset=='zinc' or dataset=='cep' else 10,
-                        'number_of_generation': 10,
-                        'optimization_step': 0,      
+                        'number_of_generation': 5,
+                        'optimization_step': 5,      
                         'maximum_distance': 50,
                         "use_argmax_generation": False,    # use random sampling or argmax during generation
                         'residual_connection_on': True,    # whether residual connection is on
@@ -88,7 +89,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                                 12: [0, 2, 4, 6, 8, 10],
                                 14: [0, 2, 4, 6, 8, 10, 12],
                             },
-                        'num_timesteps': 20,           # gnn propagation step
+                        'num_timesteps': 22,           # gnn propagation step
                         'hidden_size': 100,        
                         "kl_trade_off_lambda": 0.3,    # kl tradeoff
                         'learning_rate': 0.001, 
@@ -333,7 +334,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         output=tf.matmul(output, output_weight) 
         return output
 
-    def generate_cross_entropy(self, idx, cross_entropy_losses, edge_predictions, edge_type_predictions):
+    def generate_cross_entropy(self, idx, cross_entropy_losses, edge_predictions, edge_type_predictions,node_representations):
         v = self.placeholders['num_vertices']
         h_dim = self.params['hidden_size']
         num_symbols = self.params['num_features']
@@ -371,6 +372,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                                                 self.weights['node_gru_decoder'], "gru_scope_decoder") # [b, v, h + h]
         else:
             new_filtered_z_sampled = filtered_z_sampled
+        final_node_representations = new_filtered_z_sampled
         # Filter nonexist nodes
         new_filtered_z_sampled=new_filtered_z_sampled * self.ops['graph_state_mask']
         # Take out the node in focus
@@ -442,7 +444,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         cross_entropy_losses = cross_entropy_losses.write(idx, iteration_loss)
         edge_predictions = edge_predictions.write(idx, tf.nn.softmax(edge_logits))
         edge_type_predictions = edge_type_predictions.write(idx, edge_type_probs)
-        return (idx+1, cross_entropy_losses, edge_predictions, edge_type_predictions) # why is idx+1
+        return (idx+1, cross_entropy_losses, edge_predictions, edge_type_predictions, final_node_representations) # why is idx+1
 
     def construct_logit_matrices(self):
         v = self.placeholders['num_vertices']
@@ -459,11 +461,14 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         edge_predictions= tf.TensorArray(dtype=tf.float32, size=self.placeholders['max_iteration_num'])
         edge_type_predictions = tf.TensorArray(dtype=tf.float32, size=self.placeholders['max_iteration_num'])
 
+        node_sequence = self.placeholders['node_sequence'][:, 0, :] # [b, v]
+        node_sequence = tf.expand_dims(node_sequence, axis=2) # [b,v,1]
+        node_representations = tf.concat([filtered_z_sampled, node_sequence], axis=2) # [b, v, h + h + 1]
         # why pass idx=0 to self.generate_cross_entropy every time, seems update nothing
-        idx_final, cross_entropy_losses_final, edge_predictions_final,edge_type_predictions_final=\
-            tf.while_loop(lambda idx, cross_entropy_losses,edge_predictions,edge_type_predictions: idx < self.placeholders['max_iteration_num'],
+        idx_final, cross_entropy_losses_final, edge_predictions_final,edge_type_predictions_final, final_node_representations=\
+            tf.while_loop(lambda idx, cross_entropy_losses,edge_predictions,edge_type_predictions,node_representations: idx < self.placeholders['max_iteration_num'],
             self.generate_cross_entropy,
-            (tf.constant(0), cross_entropy_losses,edge_predictions,edge_type_predictions,))
+            (tf.constant(0), cross_entropy_losses,edge_predictions,edge_type_predictions, node_representations))
         
         # record the predictions for generation
         self.ops['edge_predictions'] = edge_predictions_final.read(0)
@@ -476,9 +481,10 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         # FC
         # Logits for node symbols
         # kk: hidden-size -> size
-        self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(self.ops['z_sampled'],[-1, h_dim]), self.weights['node_symbol_weights']) + 
+        # self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(self.ops['z_sampled'],[-1, h_dim]), self.weights['node_symbol_weights']) + 
+        #                                           self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
+        self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(final_node_representations[:,:,:h_dim],[-1, h_dim]), self.weights['node_symbol_weights']) + 
                                                   self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
-
     def construct_loss(self):
         v = self.placeholders['num_vertices']
         h_dim = self.params['hidden_size']
@@ -805,8 +811,12 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                             [node_sequence], [edge_type_mask], [edge_mask], random_normal_states)
 
                 # fetch nn predictions
-                fetch_list = [self.ops['edge_predictions'], self.ops['edge_type_predictions']]
-                edge_probs, edge_type_probs = self.sess.run(fetch_list, feed_dict=feed_dict)
+                fetch_list = [self.ops['edge_predictions'], self.ops['edge_type_predictions'], self.ops['node_symbol_logits']]
+                edge_probs, edge_type_probs, node_symbol_logits = self.sess.run(fetch_list, feed_dict=feed_dict)
+                real_length = get_graph_length([elements['mask']])[0] # [valid_node_number] 
+                # Sample node symbols
+                new_node_symbol_logits = sample_node_symbol(node_symbol_logits, [real_length], None)[0] # [v]
+                new_mol.updataNodes(new_node_symbol_logits)
                 # select an edge
                 if not self.params["use_argmax_generation"]:
                     neighbor=np.random.choice(np.arange(max_n_vertices+1), p=edge_probs[0])

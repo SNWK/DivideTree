@@ -92,7 +92,6 @@ class DivideTreeModel(object):
             data = json.load(f)
 
         restrict = self.args.get("--restrict_data")
-        # restrict = 200
         if restrict is not None and restrict > 0:
             data = data[:restrict]
 

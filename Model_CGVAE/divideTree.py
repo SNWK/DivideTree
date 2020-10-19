@@ -13,7 +13,10 @@ class DivideTree():
         while len(node_feature[0]) != 3:
             node_feature = node_feature[0]
         self.nodes += node_feature
-            
+    
+    def updateNodes(self, node_feature):
+        self.nodes = []
+        self.addNodes(node_feature)
 
     def addBond(self, node_1, node_2):
         self.edges.append((node_1, node_2))
@@ -151,12 +154,12 @@ class DivideTree():
             DB = - BD
             return 1 if np.cross(AC,AD)*np.cross(BC,BD) < 0 and np.cross(CA,CB)*np.cross(DA,DB) < 0 else 0
         # check the last added edge
-        focus = self.edges[-1]
-        new_edge = [np.array([self.nodes[focus[0]][0], self.nodes[focus[0]][1]]), 
-                    np.array([self.nodes[focus[1]][0], self.nodes[focus[1]][1]])]
+        last = self.edges[-1]
+        new_edge = [np.array([self.nodes[last[0]][0], self.nodes[last[0]][1]]), 
+                    np.array([self.nodes[last[1]][0], self.nodes[last[1]][1]])]
         for idx in range(len(self.edges) - 1):
             focus = self.edges[idx]
-            if focus[0] in self.edges[-1] or focus[1] in self.edges[-1]:
+            if focus[0] in last or focus[1] in last:
                 continue
             tmp_edge = [np.array([self.nodes[focus[0]][0], self.nodes[focus[0]][1]]), 
                         np.array([self.nodes[focus[1]][0], self.nodes[focus[1]][1]])]
