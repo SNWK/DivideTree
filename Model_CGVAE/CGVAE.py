@@ -73,8 +73,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                         "qed_trade_off_lambda": 10,
                         'prior_learning_rate': 0.05,
                         'stop_criterion': 0.01,
-                        'num_epochs': 3 if dataset=='zinc' or dataset=='cep' else 10,
-                        'epoch_to_generate': 3 if dataset=='zinc' or dataset=='cep' else 10,
+                        'num_epochs': 3 if dataset=='zinc' or dataset=='cep' else 50,
+                        'epoch_to_generate': 3 if dataset=='zinc' or dataset=='cep' else 50,
                         'number_of_generation': 5,
                         'optimization_step': 5,      
                         'maximum_distance': 50,
@@ -92,7 +92,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                         'num_timesteps': 22,           # gnn propagation step
                         'hidden_size': 100,        
                         "kl_trade_off_lambda": 0.3,    # kl tradeoff
-                        'learning_rate': 0.001, 
+                        'learning_rate': 0.0005, 
                         'graph_state_dropout_keep_prob': 1,    
                         "compensate_num": 1,           # how many atoms to be added during generation
 
@@ -357,7 +357,9 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         edge_labels = self.placeholders['edge_labels'][:, idx, :] # [b, v]  
         local_stop = self.placeholders['local_stop'][:, idx] # [b]        
         # concat the hidden states with the node in focus
-        filtered_z_sampled = tf.concat([filtered_z_sampled, node_sequence], axis=2) # [b, v, h + h + 1]
+        filtered_z_sampled = tf.cond(self.placeholders['is_generative'], lambda:  tf.pad(filtered_z_sampled, [[0,0], [0,0], [0,1]], mode="CONSTANT", name=None, constant_values=0), # standard normal 
+                    lambda: tf.concat([filtered_z_sampled, node_sequence], axis=2)) # non-standard normal
+        # filtered_z_sampled = tf.concat([filtered_z_sampled, node_sequence], axis=2)
         # Decoder GNN
         if self.params["use_graph"]:
             if self.params["residual_connection_on"]:
@@ -463,7 +465,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
 
         node_sequence = self.placeholders['node_sequence'][:, 0, :] # [b, v]
         node_sequence = tf.expand_dims(node_sequence, axis=2) # [b,v,1]
-        node_representations = tf.concat([filtered_z_sampled, node_sequence], axis=2) # [b, v, h + h + 1]
+        node_representations = tf.cond(self.placeholders['is_generative'], lambda: latent_node_state, # standard normal 
+                    lambda: tf.concat([filtered_z_sampled, node_sequence], axis=2)) # non-standard normal
         # why pass idx=0 to self.generate_cross_entropy every time, seems update nothing
         idx_final, cross_entropy_losses_final, edge_predictions_final,edge_type_predictions_final, final_node_representations=\
             tf.while_loop(lambda idx, cross_entropy_losses,edge_predictions,edge_type_predictions,node_representations: idx < self.placeholders['max_iteration_num'],
@@ -484,6 +487,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         # self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(self.ops['z_sampled'],[-1, h_dim]), self.weights['node_symbol_weights']) + 
         #                                           self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
         self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(final_node_representations[:,:,:h_dim],[-1, h_dim]), self.weights['node_symbol_weights']) + 
+                                                  self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
+        self.ops['init_node_symbol_prob'] = tf.reshape(tf.matmul(tf.reshape(self.ops['z_sampled'],[-1, h_dim]), self.weights['node_symbol_weights']) + 
                                                   self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
     def construct_loss(self):
         v = self.placeholders['num_vertices']
@@ -757,7 +762,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
             }
 
     def get_node_symbol(self, batch_feed_dict):  
-        fetch_list = [self.ops['node_symbol_prob']]
+        fetch_list = [self.ops['init_node_symbol_prob']]
         result = self.sess.run(fetch_list, feed_dict=batch_feed_dict)
         return result[0]
 
@@ -816,7 +821,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                 real_length = get_graph_length([elements['mask']])[0] # [valid_node_number] 
                 # Sample node symbols
                 new_node_symbol_logits = sample_node_symbol(node_symbol_logits, [real_length], None)[0] # [v]
-                new_mol.updataNodes(new_node_symbol_logits)
+                new_mol.updateNodes(new_node_symbol_logits)
                 # select an edge
                 if not self.params["use_argmax_generation"]:
                     neighbor=np.random.choice(np.arange(max_n_vertices+1), p=edge_probs[0])
@@ -884,7 +889,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         # Prepare dict
         node_symbol_batch_feed_dict=self.get_dynamic_feed_dict(elements, None, None,
                                      num_vertices, None, None, None, None, None, random_normal_states)
-        # Get predicted node probs
+        # Get predicted node probs kk: init state
         predicted_node_symbol_prob=self.get_node_symbol(node_symbol_batch_feed_dict)
         # Node numbers for each graph
         real_length=get_graph_length([elements['mask']])[0] # [valid_node_number] 
