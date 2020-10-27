@@ -75,7 +75,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                         'stop_criterion': 0.01,
                         'num_epochs': 3 if dataset=='zinc' or dataset=='cep' else 50,
                         'epoch_to_generate': 3 if dataset=='zinc' or dataset=='cep' else 50,
-                        'number_of_generation': 5,
+                        'number_of_generation': 20,
                         'optimization_step': 5,      
                         'maximum_distance': 50,
                         "use_argmax_generation": False,    # use random sampling or argmax during generation
@@ -486,10 +486,12 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         # kk: hidden-size -> size
         # self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(self.ops['z_sampled'],[-1, h_dim]), self.weights['node_symbol_weights']) + 
         #                                           self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
-        self.ops['node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(final_node_representations[:,:,:h_dim],[-1, h_dim]), self.weights['node_symbol_weights']) + 
+        self.ops['gen_node_symbol_logits']=tf.reshape(tf.matmul(tf.reshape(final_node_representations[:,:,:h_dim],[-1, h_dim]), self.weights['node_symbol_weights']) + 
                                                   self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
         self.ops['init_node_symbol_prob'] = tf.reshape(tf.matmul(tf.reshape(self.ops['z_sampled'],[-1, h_dim]), self.weights['node_symbol_weights']) + 
                                                   self.weights['node_symbol_biases'], [-1, v, self.params['num_features']])
+        self.ops['node_symbol_logits'] = tf.cond(self.placeholders['is_generative'], lambda: self.ops['gen_node_symbol_logits'], lambda: self.ops['init_node_symbol_prob'])
+        
     def construct_loss(self):
         v = self.placeholders['num_vertices']
         h_dim = self.params['hidden_size']
@@ -792,6 +794,8 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
         incre_adj_list=defaultdict(list)
         # record the log probabilities at each step
         total_log_prob=0
+        # init
+        sampled_node_symbol_one_hot = sampled_node_symbol
         while len(queue) > 0:
             node_in_focus = queue.popleft()
             # iterate until the stop node is selected 
@@ -808,7 +812,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                 overlapped_edge_dense = overlapped_edge_features_to_dense([overlapped_edge_sparse],max_n_vertices) # [1, v]
                 incre_adj_mat = incre_adj_mat_to_dense([incre_adj_list], 
                     self.num_edge_types, max_n_vertices) # [1, e, v, v]
-                sampled_node_symbol_one_hot = sampled_node_symbol #self.node_symbol_one_hot(sampled_node_symbol, real_n_vertices, max_n_vertices)
+                 #self.node_symbol_one_hot(sampled_node_symbol, real_n_vertices, max_n_vertices)
 
                 # get feed_dict
                 feed_dict=self.get_dynamic_feed_dict(elements, [sampled_node_symbol_one_hot],
@@ -822,6 +826,7 @@ class DenseGGNNDivideTreeModel(DivideTreeModel):
                 # Sample node symbols
                 new_node_symbol_logits = sample_node_symbol(node_symbol_logits, [real_length], None)[0] # [v]
                 new_mol.updateNodes(new_node_symbol_logits)
+                sampled_node_symbol_one_hot = new_node_symbol_logits
                 # select an edge
                 if not self.params["use_argmax_generation"]:
                     neighbor=np.random.choice(np.arange(max_n_vertices+1), p=edge_probs[0])

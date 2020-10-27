@@ -10,3 +10,6 @@ prominence-p100.txt
 *.json
 *.pickle
 *.png
+*.p
+*.pth
+Model_GRAN/exp
