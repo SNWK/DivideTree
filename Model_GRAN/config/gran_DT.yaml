@@ -22,7 +22,7 @@ dataset:
   is_overwrite_precompute: false
 model:
   name: GRANMixtureBernoulli  
-  num_mix_component: 15
+  num_mix_component: 20
   is_sym: true
   block_size: 1
   sample_stride: 1

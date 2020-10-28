@@ -1,6 +1,20 @@
 
 # GRAN
 
+## Run  
+
+Train:   
+```python run_exp.py -c config/gran_DT.yaml```  
+
+Test:  
+
+test_model_dir: snapshot_model   
+test_model_name: gran_DT.pth   
+need to copy the .pth model from exp/xx to snapshot_model/gran_DT.pth  
+```python run_exp.py -c config/gran_DT.yaml -t```
+
+======  
+
 This is the official PyTorch implementation of [Efficient Graph Generation with Graph Recurrent Attention Networks](https://arxiv.org/abs/1910.00760) as described in the following NeurIPS 2019 paper:
 
 ```
@@ -29,6 +43,9 @@ Other dependencies can be installed via
 
   ```pip install -r requirements.txt```
 
+
+
+  
 
 ## Run Demos
 

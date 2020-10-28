@@ -349,6 +349,8 @@ class GranRunner(object):
       vis_graphs = []
       for gg in graphs_pred_vis:        
         CGs = [gg.subgraph(c) for c in nx.connected_components(gg)]
+        if CGs == []:
+          continue
         CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
         vis_graphs += [CGs[0]]
 

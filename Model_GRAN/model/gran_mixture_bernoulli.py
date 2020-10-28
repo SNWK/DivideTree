@@ -388,8 +388,10 @@ class GRANMixtureBernoulli(nn.Module):
 
           prob = torch.stack(prob, dim=0)
           A[:, ii:jj, :jj] = torch.bernoulli(prob[:, :jj - ii, :])
-          features[:, :jj] = pre_feature[:, :jj]
-          labels[:, :jj] = pre_label
+          # features[:, :jj] = pre_feature[:, :jj]
+          # labels[:, :jj] = pre_label
+          features[:, ii:jj] = pre_feature[:, ii:jj]
+          labels[:, ii:jj] = pre_label[:, ii:jj]
 
         ### make it symmetric
         if self.is_sym:
