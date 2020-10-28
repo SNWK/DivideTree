@@ -22,7 +22,7 @@ dataset:
   is_overwrite_precompute: false
 model:
   name: GRANMixtureBernoulli  
-  num_mix_component: 10
+  num_mix_component: 15
   is_sym: true
   block_size: 1
   sample_stride: 1
@@ -30,7 +30,7 @@ model:
   hidden_dim: 64
   embedding_dim: 64
   num_GNN_layers: 7
-  num_GNN_prop: 1
+  num_GNN_prop: 3
   num_canonical_order: 1
   dimension_reduce: true
   has_attention: true
