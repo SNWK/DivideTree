@@ -413,9 +413,9 @@ class GRANMixtureBernoulli(nn.Module):
           features[:, ii:jj] = pre_feature
           labels[:, ii:jj] = pre_label
           prob = torch.stack(prob, dim=0)
-          # masked_prob = probMask(A, prob[:, :jj - ii, :], features, ii, jj)
-          # atmp = torch.bernoulli(torch.stack(masked_prob))
-          atmp = torch.bernoulli(prob[:, :jj - ii, :])
+          masked_prob = probMask(A, prob[:, :jj - ii, :], features, ii, jj)
+          atmp = torch.bernoulli(torch.stack(masked_prob))
+          # atmp = torch.bernoulli(prob[:, :jj - ii, :])
           A[:, ii:jj, :jj] = atmp
           # features[:, :jj] = pre_feature[:, :jj]
           # labels[:, :jj] = pre_label

@@ -12,7 +12,7 @@ dataset:
   name: DT
   data_path: data/
   node_order: BFS # k_core/BFS/degree_decent
-  train_ratio: 0.8
+  train_ratio: 0.9
   dev_ratio: 0.2
   num_subgraph_batch: 1 # number of subgraphs per mini-batch
   num_fwd_pass: 1
