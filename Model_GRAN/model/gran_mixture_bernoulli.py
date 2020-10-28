@@ -157,6 +157,7 @@ class GRANMixtureBernoulli(nn.Module):
     self.sample_stride = config.model.sample_stride # 1
     self.num_GNN_prop = config.model.num_GNN_prop # 1
     self.num_GNN_layers = config.model.num_GNN_layers # 7
+    self.agg_GNN_method = config.model.agg_GNN_method
     self.edge_weight = config.model.edge_weight if hasattr(
         config.model, 'edge_weight') else 1.0
     self.dimension_reduce = config.model.dimension_reduce # true
@@ -269,7 +270,13 @@ class GRANMixtureBernoulli(nn.Module):
         node_feat[node_idx_feat], edges, edge_feat=att_edge_feat)
 
     # AGG graph state
-    graph_state = node_state[:-1].sum(0)
+    if self.agg_GNN_method == 'sum':
+      graph_state = node_state[:-1].sum(0)
+    elif self.agg_GNN_method == 'mean':
+      graph_state = node_state[:-1].mean(0)
+    else:
+      graph_state = node_state[-1]
+
     log_label = self.output_label(graph_state)
     pre_feature = self.output_feature(graph_state)
     ### Pairwise predict edges
