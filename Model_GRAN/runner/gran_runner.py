@@ -61,6 +61,9 @@ def compute_edge_ratio(G_list):
 def get_graph(adj,f,l):
   """ get a graph from zero-padded adj """
   # remove all zeros rows and columns
+  # validList = [i for i in range(len(adj)) if ~np.all(adj == 0, axis=1)[i]]
+  f = f[~np.all(adj == 0, axis=1)]
+  l = l[~np.all(adj == 0, axis=1)]
   adj = adj[~np.all(adj == 0, axis=1)]
   adj = adj[:, ~np.all(adj == 0, axis=0)]
   adj = np.asmatrix(adj)

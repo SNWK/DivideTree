@@ -80,7 +80,7 @@ def draw_graph_list_separate(G_list,
           G, k=k / np.sqrt(G.number_of_nodes()), iterations=100)
     elif layout == 'spectral':
       pos = nx.spectral_layout(G)
-
+    peaks = [n for n in list(G.node) if G.node[n]['label'] == 1]
     if is_single:
       # node_size default 60, edge_width default 1.5
       nx.draw_networkx_nodes(
@@ -103,6 +103,15 @@ def draw_graph_list_separate(G_list,
           font_size=1.5)
       nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.2)
 
+    nx.draw_networkx_nodes(
+          G,
+          pos,
+          peaks,
+          node_size=node_size,
+          node_color='r',
+          alpha=1,
+          linewidths=0.2,
+          font_size=1.5)
     plt.draw()
     plt.tight_layout()
     plt.savefig(fname+'_{:03d}.png'.format(i), dpi=300)
@@ -120,6 +129,7 @@ def draw_graph_list_separate(G_list,
     for n in list(G.node):
       pos[n] = G.node[n]['feature'][:2].tolist()
 
+    peaks = [n for n in list(G.node) if G.node[n]['label'] == 1]
     if is_single:
       # node_size default 60, edge_width default 1.5
       nx.draw_networkx_nodes(
@@ -130,6 +140,15 @@ def draw_graph_list_separate(G_list,
           alpha=1,
           linewidths=0,
           font_size=0)
+      nx.draw_networkx_nodes(
+          G,
+          pos,
+          peaks,
+          node_size=node_size,
+          node_color='r',
+          alpha=1,
+          linewidths=0,
+          font_size=0)
       nx.draw_networkx_edges(G, pos, alpha=alpha, width=width)
     else:
       nx.draw_networkx_nodes(
@@ -137,6 +156,15 @@ def draw_graph_list_separate(G_list,
           pos,
           node_size=1.5,
           node_color='#336699',
+          alpha=1,
+          linewidths=0.2,
+          font_size=1.5)
+      nx.draw_networkx_nodes(
+          G,
+          pos,
+          peaks,
+          node_size=node_size,
+          node_color='r',
           alpha=1,
           linewidths=0.2,
           font_size=1.5)
