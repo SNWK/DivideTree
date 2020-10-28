@@ -1,8 +1,11 @@
 import time
+import sys
+sys.path.append("..")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from utils.mask_helper import probMask
 EPS = np.finfo(np.float32).eps
 
 __all__ = ['GRANMixtureBernoulli']
@@ -380,9 +383,17 @@ class GRANMixtureBernoulli(nn.Module):
           log_theta = self.output_theta(diff)
           log_alpha = self.output_alpha(diff)
 
-          log_label = self.output_label(node_state_out)
-          _, pre_label = torch.max(log_label, 2)
-          pre_feature = self.output_feature(node_state_out)
+           # AGG graph state
+          if self.agg_GNN_method == 'sum':
+            graph_state = node_state_out.sum(1)
+          elif self.agg_GNN_method == 'mean':
+            graph_state = node_state_out.mean(1)
+          else:
+            graph_state = node_state_out[-1]
+
+          log_label = self.output_label(graph_state)
+          _, pre_label = torch.max(log_label, 1)
+          pre_feature = self.output_feature(graph_state)
 
           log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
           log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L
@@ -394,13 +405,16 @@ class GRANMixtureBernoulli(nn.Module):
           prob = []
           for bb in range(B):
             prob += [torch.sigmoid(log_theta[bb, :, :, alpha[bb]])]
-
+          
+          features[:, ii:jj] = pre_feature
+          labels[:, ii:jj] = pre_label
           prob = torch.stack(prob, dim=0)
-          A[:, ii:jj, :jj] = torch.bernoulli(prob[:, :jj - ii, :])
+          masked_prob = probMask(A, prob[:, :jj - ii, :], features, ii, jj)
+          atmp = torch.bernoulli(torch.stack(masked_prob))
+          # atmp = torch.bernoulli(prob[:, :jj - ii, :])
+          A[:, ii:jj, :jj] = atmp
           # features[:, :jj] = pre_feature[:, :jj]
           # labels[:, :jj] = pre_label
-          features[:, ii:jj] = pre_feature[:, ii:jj]
-          labels[:, ii:jj] = pre_label[:, ii:jj]
 
         ### make it symmetric
         if self.is_sym:
