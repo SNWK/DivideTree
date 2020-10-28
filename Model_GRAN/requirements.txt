@@ -1,6 +1,7 @@
 networkx==2.3
 pyemd
 tqdm
+tensorboard
 tensorboardX
 scipy
 pyyaml

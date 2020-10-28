@@ -268,8 +268,10 @@ class GRANMixtureBernoulli(nn.Module):
     node_state = self.decoder(
         node_feat[node_idx_feat], edges, edge_feat=att_edge_feat)
 
-    log_label = self.output_label(node_state)
-    pre_feature = self.output_feature(node_state)
+    # AGG graph state
+    graph_state = node_state[:-1].sum(0)
+    log_label = self.output_label(graph_state)
+    pre_feature = self.output_feature(graph_state)
     ### Pairwise predict edges
     diff = node_state[node_idx_gnn[:, 0], :] - node_state[node_idx_gnn[:, 1], :]
 
@@ -476,8 +478,8 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx, subgraph_idx_base,
                                         self.num_canonical_order)
 
-      label_loss = self.label_loss_func(log_label[-1, :].unsqueeze(0), node_labels[0,0,log_label.shape[0]-1].unsqueeze(0))
-      feature_loss = self.feature_loss_func(pre_feature[-1, :].unsqueeze(0), node_features[0,0, pre_feature.shape[0]-1].unsqueeze(0))
+      label_loss = self.label_loss_func(log_label.unsqueeze(0), node_labels[0,0,log_label.shape[0]-1].unsqueeze(0))
+      feature_loss = self.feature_loss_func(pre_feature.unsqueeze(0), node_features[0,0, pre_feature.shape[0]-1].unsqueeze(0))
       return adj_loss + label_loss + feature_loss
     else:
       A, features, labels = self._sampling(batch_size)
