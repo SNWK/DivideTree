@@ -35,15 +35,15 @@ model:
   dimension_reduce: true
   has_attention: true
   edge_weight: 1.0e+0
-  agg_GNN_method: 'sum' # mean, sum
+  agg_GNN_method: 'None' # mean, sum
 train:
   optimizer: Adam  
-  lr_decay: 0.1
+  lr_decay: 0.2
   lr_decay_epoch: [200] # no decay
   num_workers: 0
   max_epoch: 20000
   batch_size: 1
-  display_iter: 10
+  display_iter: 100
   snapshot_epoch: 100
   valid_epoch: 50
   lr: 1.0e-4

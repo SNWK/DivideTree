@@ -2,6 +2,7 @@ import numpy as np
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 import torch
+import networkx as nx
 def probMask(A, P, X, ii, jj):
     def cross_product(a, b):
         return a[0]*b[1] - a[1]*b[0]
@@ -29,11 +30,13 @@ def probMask(A, P, X, ii, jj):
         edgesList = []
         edgeSet = set()
         edgesIdxList = []
+        # G = nx.Graph()
         for i in range(ii):
             for j in range(i):
                 if Adj[i][j] == 1 and (i,j) not in edgeSet:
                     edgesList.append([Xfe[i][:2], Xfe[j][:2]])
                     edgesIdxList.append((i,j))
+                    # G.add_edge(i, j)
                     edgeSet.add((i,j))
         
         newNodes = Xfe[ii:jj]
@@ -41,6 +44,7 @@ def probMask(A, P, X, ii, jj):
         for idx in range(len(newNodes)):
             for pidx in range(len(Pro[idx])):
                 newedge = [Xfe[pidx][:2], Xfe[ii+idx][:2]]
+                # edgesIdxList.append((pidx,ii+idx))
                 for i, edge in enumerate(edgesList):
                     if pidx in edgesIdxList[i]:
                         continue

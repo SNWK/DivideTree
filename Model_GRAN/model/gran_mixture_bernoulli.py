@@ -197,7 +197,9 @@ class GRANMixtureBernoulli(nn.Module):
     self.output_label = nn.Sequential(
           nn.Linear(self.hidden_dim, self.hidden_dim),
           nn.ReLU(inplace=True),
-          nn.Linear(self.hidden_dim, 2))
+          nn.Linear(self.hidden_dim, 2),
+          nn.Sigmoid()
+          )
 
     self.output_feature = nn.Sequential(
           nn.Linear(self.hidden_dim, self.hidden_dim),
@@ -216,8 +218,7 @@ class GRANMixtureBernoulli(nn.Module):
     pos_weight = torch.ones([1]) * self.edge_weight
     self.label_loss_func = nn.CrossEntropyLoss(reduction='mean')
     self.feature_loss_func = nn.MSELoss(reduction='mean')
-    self.adj_loss_func = nn.BCEWithLogitsLoss(
-        pos_weight=pos_weight, reduction='none')
+    self.adj_loss_func = nn.BCEWithLogitsLoss(pos_weight=pos_weight, reduction='none')
     
 
   def _inference(self,
@@ -326,12 +327,15 @@ class GRANMixtureBernoulli(nn.Module):
 
           if ii >= K:
             if self.dimension_reduce:
-              node_state[:, ii - K:ii, :] = self.decoder_input(A[:, ii - K:ii, :N])
+              # node_state[:, ii - K:ii, :] = self.decoder_input(A[:, ii - K:ii, :N])
+              node_state[:, ii - K:ii, :] = self.decoder_input_new(features[:,ii - K:ii,:])
+
             else:
               node_state[:, ii - K:ii, :] = A[:, ii - S:ii, :N]
           else:
             if self.dimension_reduce:
-              node_state[:, :ii, :] = self.decoder_input(A[:, :ii, :N])
+              # node_state[:, :ii, :] = self.decoder_input(A[:, :ii, :N])
+              node_state[:, :ii, :] = self.decoder_input_new(features[:, :ii,:])
             else:
               node_state[:, :ii, :] = A[:, ii - S:ii, :N]
 
@@ -389,7 +393,7 @@ class GRANMixtureBernoulli(nn.Module):
           elif self.agg_GNN_method == 'mean':
             graph_state = node_state_out.mean(1)
           else:
-            graph_state = node_state_out[-1]
+            graph_state = node_state_out[:, -1]
 
           log_label = self.output_label(graph_state)
           _, pre_label = torch.max(log_label, 1)
@@ -409,9 +413,9 @@ class GRANMixtureBernoulli(nn.Module):
           features[:, ii:jj] = pre_feature
           labels[:, ii:jj] = pre_label
           prob = torch.stack(prob, dim=0)
-          masked_prob = probMask(A, prob[:, :jj - ii, :], features, ii, jj)
-          atmp = torch.bernoulli(torch.stack(masked_prob))
-          # atmp = torch.bernoulli(prob[:, :jj - ii, :])
+          # masked_prob = probMask(A, prob[:, :jj - ii, :], features, ii, jj)
+          # atmp = torch.bernoulli(torch.stack(masked_prob))
+          atmp = torch.bernoulli(prob[:, :jj - ii, :])
           A[:, ii:jj, :jj] = atmp
           # features[:, :jj] = pre_feature[:, :jj]
           # labels[:, :jj] = pre_label
@@ -499,7 +503,7 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx, subgraph_idx_base,
                                         self.num_canonical_order)
 
-      label_loss = self.label_loss_func(log_label.unsqueeze(0), node_labels[0,0,log_label.shape[0]-1].unsqueeze(0))
+      label_loss = 2 * self.label_loss_func(log_label.unsqueeze(0), node_labels[0,0,log_label.shape[0]-1].unsqueeze(0))
       feature_loss = self.feature_loss_func(pre_feature.unsqueeze(0), node_features[0,0, pre_feature.shape[0]-1].unsqueeze(0))
       return adj_loss + label_loss + feature_loss
     else:
