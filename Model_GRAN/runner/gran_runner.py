@@ -1,4 +1,5 @@
 from __future__ import (division, print_function)
+import io
 import os
 import time
 
@@ -27,7 +28,7 @@ from utils.train_helper import data_to_gpu, snapshot, load_model, EarlyStopper
 from utils.data_helper import *
 from utils.eval_helper import *
 from utils.dist_helper import compute_mmd, gaussian_emd, gaussian, emd, gaussian_tv
-from utils.vis_helper import draw_graph_list, draw_graph_list_separate
+from utils.vis_helper import draw_graph_list, draw_graph_list_separate, get_current_sample_img
 from utils.data_parallel import DataParallel
 
 
@@ -225,9 +226,9 @@ class GranRunner(object):
       lr_scheduler.step()
       train_iterator = train_loader.__iter__()
 
-      for inner_iter in range(len(train_loader) // self.num_gpus):
+      # for inner_iter in range(len(train_loader) // self.num_gpus):
+      for inner_iter in range(100):
         optimizer.zero_grad()
-
         batch_data = []
         if self.use_gpu:
           for _ in self.gpus:
@@ -280,11 +281,34 @@ class GranRunner(object):
       if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
         logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
         snapshot(model.module if self.use_gpu else model, optimizer, self.config, epoch + 1, scheduler=lr_scheduler)
-    
+      if epoch % 20 == 0:
+        self.monitor_cur_sample_img(model, epoch)
     pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
     self.writer.close()
     
     return 1
+  def monitor_cur_sample_img(self, model, epoch):
+    # add generated img monitor
+    model.eval()
+    A_pred = []
+    feature_pred = []
+    labels_pred = []
+    num_nodes_pred = []
+    with torch.no_grad():        
+        input_dict = {}
+        input_dict['is_sampling']=True
+        input_dict['batch_size']=1
+        input_dict['num_nodes_pmf']=self.num_nodes_pmf_train
+        A_tmp, features_tmp, labels_tmp = model([input_dict])
+        A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
+        feature_pred += [aa.data.cpu().numpy() for aa in features_tmp]
+        labels_pred += [aa.data.cpu().numpy() for aa in labels_tmp]
+        num_nodes_pred += [aa.shape[0] for aa in A_tmp]
+    graphs_gen = [get_graph(aa, feature_pred[idx], labels_pred[idx]) for idx, aa in enumerate(A_pred)]
+    img = get_current_sample_img(graphs_gen)
+    img_arr = np.fromstring(img.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    img_arr = img_arr.reshape(img.canvas.get_width_height()[::-1] + (3,))
+    self.writer.add_image('sample_img', img_arr, global_step=epoch, dataformats='HWC')
 
   def test(self):
     self.config.save_dir = self.test_conf.test_model_dir

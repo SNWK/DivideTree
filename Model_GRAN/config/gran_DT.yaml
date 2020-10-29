@@ -19,7 +19,7 @@ dataset:
   has_node_feat: true
   is_save_split: false  
   is_sample_subgraph: true # set to true if you want to sample subgraphs
-  is_overwrite_precompute: True
+  is_overwrite_precompute: true
 model:
   name: GRANMixtureBernoulli  
   num_mix_component: 20
@@ -30,7 +30,7 @@ model:
   hidden_dim: 64
   embedding_dim: 64
   num_GNN_layers: 7
-  num_GNN_prop: 3
+  num_GNN_prop: 1
   num_canonical_order: 1
   dimension_reduce: true
   has_attention: true
@@ -61,7 +61,7 @@ test:
   is_vis: true
   is_single_plot: false # visualize `num_vis` samples in a single image
   is_test_ER: false # test Erdos-Renyi baseline
-  use_mask_prob: false
+  use_mask_prob: False
   num_vis: 20
   vis_num_row: 3 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true

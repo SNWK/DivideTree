@@ -175,3 +175,42 @@ def draw_graph_list_separate(G_list,
     plt.savefig(fname+'_{:03d}_pre.png'.format(i), dpi=300)
     plt.close()
 
+
+def get_current_sample_img(G_list,
+                    node_size=55,
+                    alpha=1,
+                    width=1.3):
+  
+  for i, G in enumerate(G_list):
+    plt.switch_backend('agg')
+    plt.axis("off")
+    pos ={}
+    for n in list(G.node):
+      pos[n] = G.node[n]['feature'][:2].tolist()
+
+    peaks = [n for n in list(G.node) if G.node[n]['label'] == 1]
+    # node_size default 60, edge_width default 1.5
+    nx.draw_networkx_nodes(
+          G,
+          pos,
+          node_size=node_size,
+          node_color='#336699',
+          alpha=1,
+          linewidths=0,
+          font_size=0)
+    nx.draw_networkx_nodes(
+          G,
+          pos,
+          peaks,
+          node_size=node_size,
+          node_color='r',
+          alpha=1,
+          linewidths=0,
+          font_size=0)
+    nx.draw_networkx_edges(G, pos, alpha=alpha, width=width)
+
+    plt.draw()
+    # buf = plt.buffer_rgba()
+    img = plt.gcf()
+    plt.close()
+  return img

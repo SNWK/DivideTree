@@ -509,8 +509,9 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.num_canonical_order)
 
       label_loss = self.label_loss_func(log_label.unsqueeze(0), node_labels[0,0,num_edges-1].unsqueeze(0))
-      feature_loss = self.feature_loss_func(pre_feature.unsqueeze(0), node_features[0,0, num_edges-1].unsqueeze(0))
-      return adj_loss + label_loss + feature_loss
+      feature_loss_pos = self.feature_loss_func(pre_feature[:2].unsqueeze(0), node_features[0,0, num_edges-1][:2].unsqueeze(0))
+      feature_loss_ele = self.feature_loss_func(pre_feature[-1:].unsqueeze(0), node_features[0,0, num_edges-1][-1:].unsqueeze(0))
+      return adj_loss + label_loss + 2*feature_loss_pos + feature_loss_ele
     else:
       A, features, labels = self._sampling(batch_size)
 
