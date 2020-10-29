@@ -107,6 +107,7 @@ class GranRunner(object):
     self.num_vis = config.test.num_vis
     self.vis_num_row = config.test.vis_num_row
     self.is_single_plot = config.test.is_single_plot
+    self.use_mask_prob = config.test.use_mask_prob
     self.num_gpus = len(self.gpus)
     self.is_shuffle = False
 

@@ -170,6 +170,7 @@ class GRANMixtureBernoulli(nn.Module):
     self.num_mix_component = config.model.num_mix_component # 20
     self.has_rand_feat = False # use random feature instead of 1-of-K encoding
     self.att_edge_dim = 64
+    self.use_mask_prob = config.test.use_mask_prob
 
     self.output_theta = nn.Sequential(
         nn.Linear(self.hidden_dim, self.hidden_dim),
@@ -195,8 +196,9 @@ class GRANMixtureBernoulli(nn.Module):
       self.embedding_dim = self.max_num_nodes
 
     self.output_label = nn.Sequential(
-          nn.Linear(self.hidden_dim, self.hidden_dim),
+          nn.Linear(self.hidden_dim, 32),
           nn.ReLU(inplace=True),
+          nn.Dropout(0.5),
           nn.Linear(self.hidden_dim, 2),
           nn.Sigmoid()
           )
@@ -204,6 +206,7 @@ class GRANMixtureBernoulli(nn.Module):
     self.output_feature = nn.Sequential(
           nn.Linear(self.hidden_dim, self.hidden_dim),
           nn.ReLU(inplace=True),
+          nn.Dropout(0.5),
           nn.Linear(self.hidden_dim, 3))
 
     self.decoder = GNN(
@@ -273,11 +276,11 @@ class GRANMixtureBernoulli(nn.Module):
     node_state = self.decoder(
         node_feat[node_idx_feat], edges, edge_feat=att_edge_feat)
 
-    # AGG graph state
+    # AGG graph state, the last line is the new generated data
     if self.agg_GNN_method == 'sum':
-      graph_state = node_state[:-1].sum(0)
+      graph_state = node_state.sum(0)
     elif self.agg_GNN_method == 'mean':
-      graph_state = node_state[:-1].mean(0)
+      graph_state = node_state.mean(0)
     else:
       graph_state = node_state[-1]
 
@@ -413,9 +416,11 @@ class GRANMixtureBernoulli(nn.Module):
           features[:, ii:jj] = pre_feature
           labels[:, ii:jj] = pre_label
           prob = torch.stack(prob, dim=0)
-          masked_prob = probMask(A, prob[:, :jj - ii, :], features, ii, jj)
-          atmp = torch.bernoulli(torch.stack(masked_prob))
-          # atmp = torch.bernoulli(prob[:, :jj - ii, :])
+          if self.use_mask_prob:
+            masked_prob = probMask(A, prob[:, :jj - ii, :], features, ii, jj)
+            atmp = torch.bernoulli(torch.stack(masked_prob))
+          else:
+            atmp = torch.bernoulli(prob[:, :jj - ii, :])
           A[:, ii:jj, :jj] = atmp
           # features[:, :jj] = pre_feature[:, :jj]
           # labels[:, :jj] = pre_label
@@ -503,8 +508,8 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx, subgraph_idx_base,
                                         self.num_canonical_order)
 
-      label_loss = 2 * self.label_loss_func(log_label.unsqueeze(0), node_labels[0,0,log_label.shape[0]-1].unsqueeze(0))
-      feature_loss = self.feature_loss_func(pre_feature.unsqueeze(0), node_features[0,0, pre_feature.shape[0]-1].unsqueeze(0))
+      label_loss = self.label_loss_func(log_label.unsqueeze(0), node_labels[0,0,num_edges-1].unsqueeze(0))
+      feature_loss = self.feature_loss_func(pre_feature.unsqueeze(0), node_features[0,0, num_edges-1].unsqueeze(0))
       return adj_loss + label_loss + feature_loss
     else:
       A, features, labels = self._sampling(batch_size)

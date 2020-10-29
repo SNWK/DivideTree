@@ -38,8 +38,8 @@ model:
   agg_GNN_method: 'None' # mean, sum
 train:
   optimizer: Adam  
-  lr_decay: 0.2
-  lr_decay_epoch: [200] # no decay
+  lr_decay: 0.1
+  lr_decay_epoch: [500] # no decay
   num_workers: 0
   max_epoch: 20000
   batch_size: 1
@@ -61,6 +61,7 @@ test:
   is_vis: true
   is_single_plot: false # visualize `num_vis` samples in a single image
   is_test_ER: false # test Erdos-Renyi baseline
+  use_mask_prob: false
   num_vis: 20
   vis_num_row: 3 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
