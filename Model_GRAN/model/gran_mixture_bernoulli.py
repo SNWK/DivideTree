@@ -196,7 +196,7 @@ class GRANMixtureBernoulli(nn.Module):
       self.embedding_dim = self.max_num_nodes
 
     self.output_label = nn.Sequential(
-          nn.Linear(self.hidden_dim, 32),
+          nn.Linear(self.hidden_dim, self.hidden_dim),
           nn.ReLU(inplace=True),
           nn.Dropout(0.5),
           nn.Linear(self.hidden_dim, 2),
