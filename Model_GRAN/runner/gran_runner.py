@@ -226,8 +226,7 @@ class GranRunner(object):
       lr_scheduler.step()
       train_iterator = train_loader.__iter__()
 
-      # for inner_iter in range(len(train_loader) // self.num_gpus):
-      for inner_iter in range(100):
+      for inner_iter in range(len(train_loader) // self.num_gpus):
         optimizer.zero_grad()
         batch_data = []
         if self.use_gpu:
