@@ -19,7 +19,7 @@ dataset:
   has_node_feat: true
   is_save_split: false  
   is_sample_subgraph: true # set to true if you want to sample subgraphs
-  is_overwrite_precompute: true
+  is_overwrite_precompute: false
 model:
   name: GRANMixtureBernoulli  
   num_mix_component: 20
@@ -36,8 +36,9 @@ model:
   has_attention: true
   edge_weight: 1.0e+0
   agg_GNN_method: 'None' # mean, sum
+  relative_training: True
 train:
-  optimizer: Adam  
+  optimizer: SGD  
   lr_decay: 0.1
   lr_decay_epoch: [1000] # no decay
   num_workers: 0

@@ -170,7 +170,9 @@ class GRANMixtureBernoulli(nn.Module):
     self.num_mix_component = config.model.num_mix_component # 20
     self.has_rand_feat = False # use random feature instead of 1-of-K encoding
     self.att_edge_dim = 64
+
     self.use_mask_prob = config.test.use_mask_prob
+    self.relative_training = config.model.relative_training
 
     self.output_theta = nn.Sequential(
         nn.Linear(self.hidden_dim, self.hidden_dim),
@@ -197,17 +199,23 @@ class GRANMixtureBernoulli(nn.Module):
 
     self.output_label = nn.Sequential(
           nn.Linear(self.hidden_dim, self.hidden_dim),
-          nn.ReLU(inplace=True),
+          nn.LeakyReLU(inplace=True),
           nn.Dropout(0.5),
           nn.Linear(self.hidden_dim, 2),
           nn.Sigmoid()
           )
 
+    self.output_position = nn.Sequential(
+          nn.Linear(self.hidden_dim, self.hidden_dim),
+          nn.LeakyReLU(inplace=True),
+          nn.Dropout(0.5),
+          nn.Linear(self.hidden_dim, 2))
+
     self.output_feature = nn.Sequential(
           nn.Linear(self.hidden_dim, self.hidden_dim),
-          nn.ReLU(inplace=True),
+          nn.LeakyReLU(inplace=True),
           nn.Dropout(0.5),
-          nn.Linear(self.hidden_dim, 3))
+          nn.Linear(self.hidden_dim, 1))
 
     self.decoder = GNN(
         msg_dim=self.hidden_dim,
@@ -285,6 +293,7 @@ class GRANMixtureBernoulli(nn.Module):
       graph_state = node_state[-1]
 
     log_label = self.output_label(graph_state)
+    pre_position = self.output_position(graph_state)
     pre_feature = self.output_feature(graph_state)
     ### Pairwise predict edges
     diff = node_state[node_idx_gnn[:, 0], :] - node_state[node_idx_gnn[:, 1], :]
@@ -294,7 +303,7 @@ class GRANMixtureBernoulli(nn.Module):
     log_theta = log_theta.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
-    return log_theta, log_alpha, log_label, pre_feature
+    return log_theta, log_alpha, log_label, pre_position, pre_feature
 
   def _sampling(self, B):
     """ generate adj in row-wise auto-regressive fashion """
@@ -400,6 +409,7 @@ class GRANMixtureBernoulli(nn.Module):
 
           log_label = self.output_label(graph_state)
           _, pre_label = torch.max(log_label, 1)
+          pre_position = self.output_position(graph_state)
           pre_feature = self.output_feature(graph_state)
 
           log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
@@ -412,8 +422,12 @@ class GRANMixtureBernoulli(nn.Module):
           prob = []
           for bb in range(B):
             prob += [torch.sigmoid(log_theta[bb, :, :, alpha[bb]])]
-          
-          features[:, ii:jj] = pre_feature
+
+          if self.relative_training:
+            features[:, ii:jj, :2] = relative_position_target(features.unsqueeze(0), ii) + pre_position
+          else: 
+            features[:, ii:jj, :2] = pre_position
+          features[:, ii:jj, -1:] = pre_feature
           labels[:, ii:jj] = pre_label
           prob = torch.stack(prob, dim=0)
           if self.use_mask_prob:
@@ -493,7 +507,7 @@ class GRANMixtureBernoulli(nn.Module):
       B, _, N, _ = A_pad.shape
 
       ### compute adj loss
-      log_theta, log_alpha, log_label, pre_feature = self._inference(
+      log_theta, log_alpha, log_label, pre_position, pre_feature = self._inference(
           A_pad=A_pad,
           node_features = node_features,
           node_labels = node_labels,
@@ -509,9 +523,13 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.num_canonical_order)
 
       label_loss = self.label_loss_func(log_label.unsqueeze(0), node_labels[0,0,num_edges-1].unsqueeze(0))
-      feature_loss_pos = self.feature_loss_func(pre_feature[:2].unsqueeze(0), node_features[0,0, num_edges-1][:2].unsqueeze(0))
-      feature_loss_ele = self.feature_loss_func(pre_feature[-1:].unsqueeze(0), node_features[0,0, num_edges-1][-1:].unsqueeze(0))
-      return adj_loss + label_loss + 2*feature_loss_pos + feature_loss_ele
+      if self.relative_training:
+        target = relative_position_target(node_features, num_edges)
+        feature_loss_pos = self.feature_loss_func(pre_position.unsqueeze(0), target)
+      else:
+        feature_loss_pos = self.feature_loss_func(pre_position.unsqueeze(0), node_features[0,0, num_edges-1][:2].unsqueeze(0))
+      feature_loss_feature = self.feature_loss_func(pre_feature.unsqueeze(0), node_features[0,0, num_edges-1][-1:].unsqueeze(0))
+      return adj_loss + label_loss + 2*feature_loss_pos + feature_loss_feature
     else:
       A, features, labels = self._sampling(batch_size)
 
@@ -622,3 +640,9 @@ def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
     return loss, neg_log_prob
   else:
     return loss
+
+def relative_position_target(node_features, num_edges):
+  existing_poss = node_features[0,0, :num_edges-1][:,:2]
+  center_pos = torch.sum(existing_poss, 0) / (num_edges-1+1.0e-6)
+  target_pos =  node_features[0,0, num_edges-1][:2] - center_pos
+  return target_pos.unsqueeze(0)
