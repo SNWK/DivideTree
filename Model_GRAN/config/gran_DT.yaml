@@ -35,19 +35,20 @@ model:
   dimension_reduce: true
   has_attention: true
   edge_weight: 1.0e+0
-  agg_GNN_method: 'None' # mean, sum
+  agg_GNN_method: 'none' # mean, sum
   relative_training: True
+  relative_num: 20
 train:
-  optimizer: SGD  
-  lr_decay: 0.1
-  lr_decay_epoch: [1000] # no decay
-  num_workers: 0
+  optimizer: Adam  
+  lr_decay: 0.8
+  lr_decay_epoch: [100]
+  num_workers: 4
   max_epoch: 20000
   batch_size: 1
   display_iter: 100
   snapshot_epoch: 100
   valid_epoch: 50
-  lr: 1.0e-4
+  lr: 1.0e-3
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true

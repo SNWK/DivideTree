@@ -173,6 +173,7 @@ class GRANMixtureBernoulli(nn.Module):
 
     self.use_mask_prob = config.test.use_mask_prob
     self.relative_training = config.model.relative_training
+    self.relative_num = config.model.relative_num
 
     self.output_theta = nn.Sequential(
         nn.Linear(self.hidden_dim, self.hidden_dim),
@@ -424,7 +425,7 @@ class GRANMixtureBernoulli(nn.Module):
             prob += [torch.sigmoid(log_theta[bb, :, :, alpha[bb]])]
 
           if self.relative_training:
-            features[:, ii:jj, :2] = relative_position_target(features.unsqueeze(0), ii) + pre_position
+            features[:, ii:jj, :2] = relative_position_target(features.unsqueeze(0), ii, self.relative_num) + pre_position
           else: 
             features[:, ii:jj, :2] = pre_position
           features[:, ii:jj, -1:] = pre_feature
@@ -524,7 +525,7 @@ class GRANMixtureBernoulli(nn.Module):
 
       label_loss = self.label_loss_func(log_label.unsqueeze(0), node_labels[0,0,num_edges-1].unsqueeze(0))
       if self.relative_training:
-        target = relative_position_target(node_features, num_edges)
+        target = relative_position_target(node_features, num_edges, self.relative_num)
         feature_loss_pos = self.feature_loss_func(pre_position.unsqueeze(0), target)
       else:
         feature_loss_pos = self.feature_loss_func(pre_position.unsqueeze(0), node_features[0,0, num_edges-1][:2].unsqueeze(0))
@@ -641,8 +642,9 @@ def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
   else:
     return loss
 
-def relative_position_target(node_features, num_edges):
-  existing_poss = node_features[0,0, :num_edges-1][:,:2]
+def relative_position_target(node_features, num_edges, relative_num):
+  start = max(0, num_edges - relative_num)
+  existing_poss = node_features[0,0, start:num_edges-1][:,:2]
   center_pos = torch.sum(existing_poss, 0) / (num_edges-1+1.0e-6)
   target_pos =  node_features[0,0, num_edges-1][:2] - center_pos
   return target_pos.unsqueeze(0)
