@@ -1,6 +1,7 @@
 from __future__ import (division, print_function)
 import io
 import os
+from pickle import TRUE
 import time
 
 from yaml import nodes
@@ -298,6 +299,7 @@ class GranRunner(object):
         input_dict['is_sampling']=True
         input_dict['batch_size']=1
         input_dict['num_nodes_pmf']=self.num_nodes_pmf_train
+        input_dict['use_mask_prob']=False
         A_tmp, features_tmp, labels_tmp = model([input_dict])
         A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
         feature_pred += [aa.data.cpu().numpy() for aa in features_tmp]
@@ -308,6 +310,27 @@ class GranRunner(object):
     img_arr = np.fromstring(img.canvas.tostring_rgb(), dtype=np.uint8, sep='')
     img_arr = img_arr.reshape(img.canvas.get_width_height()[::-1] + (3,))
     self.writer.add_image('sample_img', img_arr, global_step=epoch, dataformats='HWC')
+
+    A_pred = []
+    feature_pred = []
+    labels_pred = []
+    num_nodes_pred = []
+    with torch.no_grad():        
+        input_dict = {}
+        input_dict['is_sampling']=True
+        input_dict['batch_size']=1
+        input_dict['num_nodes_pmf']=self.num_nodes_pmf_train
+        input_dict['use_mask_prob']=True
+        A_tmp, features_tmp, labels_tmp = model([input_dict])
+        A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
+        feature_pred += [aa.data.cpu().numpy() for aa in features_tmp]
+        labels_pred += [aa.data.cpu().numpy() for aa in labels_tmp]
+        num_nodes_pred += [aa.shape[0] for aa in A_tmp]
+    graphs_gen = [get_graph(aa, feature_pred[idx], labels_pred[idx]) for idx, aa in enumerate(A_pred)]
+    img = get_current_sample_img(graphs_gen)
+    img_arr = np.fromstring(img.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    img_arr = img_arr.reshape(img.canvas.get_width_height()[::-1] + (3,))
+    self.writer.add_image('sample_img_mask', img_arr, global_step=epoch, dataformats='HWC')
 
   def test(self):
     self.config.save_dir = self.test_conf.test_model_dir

@@ -99,6 +99,7 @@ class GRANData(object):
     adj_3 = np.array(nx.to_numpy_matrix(G, nodelist=node_list_bfs))
     feature_3 = np.array([G.node[dd]['feature'] for dd in node_list_bfs])
     label_3 = np.array([G.node[dd]['label'] for dd in node_list_bfs])
+    
     adj_4 = np.array(nx.to_numpy_matrix(G, nodelist=node_list_dfs))
     feature_4 = np.array([G.node[dd]['feature'] for dd in node_list_dfs])
     label_4 = np.array([G.node[dd]['label'] for dd in node_list_dfs])
@@ -242,7 +243,7 @@ class GRANData(object):
               constant_values=1.0)  # assuming fully connected for the new block
           adj_block = np.tril(adj_block, k=-1)
           adj_block = adj_block + adj_block.transpose()
-          adj_block = torch.from_numpy(adj_block).to_sparse()
+          adj_block = torch.from_numpy(adj_block).to_sparse() # [[x1,x1,x2...], [y1..]]
           edges += [adj_block.coalesce().indices().long()]
 
           ### get attention index
@@ -257,7 +258,7 @@ class GRANData(object):
                     np.arange(1, K + 1).astype(np.uint8)
                 ])
             ]
-
+          # 0,0,0,0...0,1
           ### get node feature index for GNN input
           # use inf to indicate the newly added nodes where input feature is zero
           if jj == 0:
@@ -278,7 +279,7 @@ class GRANData(object):
                              axis=1).astype(np.int64)
           ]
 
-          ### get predict label
+          ### get predict label, which position real has a edge
           label += [
               adj_full[idx_row_gnn, idx_col_gnn].flatten().astype(np.uint8)
           ]
