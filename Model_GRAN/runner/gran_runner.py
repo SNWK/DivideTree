@@ -237,7 +237,8 @@ class GranRunner(object):
             iter_count += 1
         
         
-        avg_train_loss = .0        
+        avg_train_loss = .0
+        avg_adj_loss, avg_label_loss, avg_feature_loss_pos, avg_feature_loss_feature = .0, .0, .0, .0
         for ff in range(self.dataset_conf.num_fwd_pass):
           batch_fwd = []
           
@@ -257,20 +258,38 @@ class GranRunner(object):
               batch_fwd.append((data,))
 
           if batch_fwd:
-            train_loss = model(*batch_fwd).mean()              
-            avg_train_loss += train_loss              
+            # train_loss = model(*batch_fwd).mean()     
+            adj_loss, label_loss, feature_loss_pos, feature_loss_feature = model(*batch_fwd) 
+            adj_loss, label_loss, feature_loss_pos, feature_loss_feature = adj_loss.mean(), label_loss.mean(), feature_loss_pos.mean(), feature_loss_feature.mean() 
+            train_loss = adj_loss + label_loss + feature_loss_pos + feature_loss_feature
 
+            avg_train_loss += train_loss              
+            avg_adj_loss += adj_loss
+            avg_label_loss += label_loss
+            avg_feature_loss_pos += feature_loss_pos
+            avg_feature_loss_feature += feature_loss_feature
             # assign gradient
             train_loss.backward()
         
         # clip_grad_norm_(model.parameters(), 5.0e-0)
         optimizer.step()
         avg_train_loss /= float(self.dataset_conf.num_fwd_pass)
-        
+        avg_adj_loss /= float(self.dataset_conf.num_fwd_pass)
+        avg_label_loss /= float(self.dataset_conf.num_fwd_pass)
+        avg_feature_loss_pos /= float(self.dataset_conf.num_fwd_pass)
+        avg_feature_loss_feature /= float(self.dataset_conf.num_fwd_pass)
         # reduce
         train_loss = float(avg_train_loss.data.cpu().numpy())
-        
         self.writer.add_scalar('train_loss', train_loss, iter_count)
+        adj_loss = float(avg_adj_loss.data.cpu().numpy())
+        self.writer.add_scalar('adj_loss', adj_loss, iter_count)
+        label_loss = float(avg_label_loss.data.cpu().numpy())
+        self.writer.add_scalar('label_loss', label_loss, iter_count)
+        feature_loss_pos = float(avg_feature_loss_pos.data.cpu().numpy())
+        self.writer.add_scalar('feature_loss_pos', feature_loss_pos, iter_count)
+        feature_loss_feature = float(avg_feature_loss_feature.data.cpu().numpy())
+        self.writer.add_scalar('feature_loss_feature', feature_loss_feature, iter_count)
+
         results['train_loss'] += [train_loss]
         results['train_step'] += [iter_count]
 
@@ -281,7 +300,7 @@ class GranRunner(object):
       if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
         logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
         snapshot(model.module if self.use_gpu else model, optimizer, self.config, epoch + 1, scheduler=lr_scheduler)
-      if epoch % 20 == 0:
+      if epoch % 5 == 0:
         self.monitor_cur_sample_img(model, epoch)
     pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
     self.writer.close()

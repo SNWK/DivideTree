@@ -36,8 +36,8 @@ model:
   has_attention: true
   edge_weight: 1.0e+0
   agg_GNN_method: 'none' # mean, sum
-  relative_training: True
-  relative_num: 20
+  relative_training: false
+  relative_num: 30
 train:
   optimizer: Adam  
   lr_decay: 0.1
@@ -46,7 +46,7 @@ train:
   max_epoch: 20000
   batch_size: 1
   display_iter: 100
-  snapshot_epoch: 100
+  snapshot_epoch: 10
   valid_epoch: 50
   lr: 1.0e-4
   wd: 0.0e-4
