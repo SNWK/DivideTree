@@ -219,7 +219,7 @@ class GRANMixtureBernoulli(nn.Module):
           nn.Linear(self.hidden_dim, 1))
 
     self.decoder = GNN(
-        msg_dim=self.hidden_dim,
+        msg_dim=self.embedding_dim,
         node_state_dim=self.hidden_dim,
         edge_feat_dim=2 * self.att_edge_dim,
         num_prop=self.num_GNN_prop,
@@ -293,11 +293,26 @@ class GRANMixtureBernoulli(nn.Module):
     else:
       graph_state = node_state[-1]
 
-    log_label = self.output_label(graph_state)
     pre_position = self.output_position(graph_state)
     pre_feature = self.output_feature(graph_state)
+
+    # do GNN again with new features
+    new_feature = torch.cat((pre_position, pre_feature), 0)
+    new_node_feat = node_feat.clone()
+    new_node_feat[0] = self.decoder_input_new(new_feature)
+    new_node_state = self.decoder(
+        new_node_feat[node_idx_feat], edges, edge_feat=att_edge_feat)
+    # AGG graph state, the last line is the new generated data
+    if self.agg_GNN_method == 'sum':
+      graph_state = new_node_state.sum(0)
+    elif self.agg_GNN_method == 'mean':
+      graph_state = new_node_state.mean(0)
+    else:
+      graph_state = new_node_state[-1]
+    
+    log_label = self.output_label(graph_state)
     ### Pairwise predict edges
-    diff = node_state[node_idx_gnn[:, 0], :] - node_state[node_idx_gnn[:, 1], :]
+    diff = new_node_state[node_idx_gnn[:, 0], :] - new_node_state[node_idx_gnn[:, 1], :]
 
     log_theta = self.output_theta(diff)  # B X (tt+K)K
     log_alpha = self.output_alpha(diff)  # B X (tt+K)K
@@ -391,6 +406,29 @@ class GRANMixtureBernoulli(nn.Module):
               node_state_in.view(-1, H), edges, edge_feat=att_edge_feat)
           node_state_out = node_state_out.view(B, jj, -1)
 
+           # AGG graph state
+          if self.agg_GNN_method == 'sum':
+            graph_state = node_state_out.sum(1)
+          elif self.agg_GNN_method == 'mean':
+            graph_state = node_state_out.mean(1)
+          else:
+            graph_state = node_state_out[:, -1]
+
+          pre_position = self.output_position(graph_state)
+          pre_feature = self.output_feature(graph_state)
+
+          if self.relative_training:
+            features[:, ii:jj, :2] = relative_position_target(features.unsqueeze(0), ii, self.relative_num) + pre_position
+          else: 
+            features[:, ii:jj, :2] = pre_position
+          features[:, ii:jj, -1:] = pre_feature
+
+          # do GNN again
+          node_state_in = self.decoder_input_new(features[:, :jj,:])
+          node_state_out = self.decoder(
+              node_state_in.view(-1, H), edges, edge_feat=att_edge_feat)
+          node_state_out = node_state_out.view(B, jj, -1)
+          
           idx_row, idx_col = np.meshgrid(np.arange(ii, jj), np.arange(jj))
           idx_row = torch.from_numpy(idx_row.reshape(-1)).long().to(self.device)
           idx_col = torch.from_numpy(idx_col.reshape(-1)).long().to(self.device)
@@ -410,8 +448,6 @@ class GRANMixtureBernoulli(nn.Module):
 
           log_label = self.output_label(graph_state)
           _, pre_label = torch.max(log_label, 1)
-          pre_position = self.output_position(graph_state)
-          pre_feature = self.output_feature(graph_state)
 
           log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
           log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L
@@ -424,11 +460,7 @@ class GRANMixtureBernoulli(nn.Module):
           for bb in range(B):
             prob += [torch.sigmoid(log_theta[bb, :, :, alpha[bb]])]
 
-          if self.relative_training:
-            features[:, ii:jj, :2] = relative_position_target(features.unsqueeze(0), ii, self.relative_num) + pre_position
-          else: 
-            features[:, ii:jj, :2] = pre_position
-          features[:, ii:jj, -1:] = pre_feature
+          # node_state_in[]
           labels[:, ii:jj] = pre_label
           prob = torch.stack(prob, dim=0)
           if self.use_mask_prob:
