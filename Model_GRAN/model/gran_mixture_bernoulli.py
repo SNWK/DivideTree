@@ -226,6 +226,14 @@ class GRANMixtureBernoulli(nn.Module):
         num_layer=self.num_GNN_layers,
         has_attention=self.has_attention)
 
+    self.decoder2 = GNN(
+        msg_dim=self.embedding_dim,
+        node_state_dim=self.hidden_dim,
+        edge_feat_dim=2 * self.att_edge_dim,
+        num_prop=self.num_GNN_prop,
+        num_layer=self.num_GNN_layers,
+        has_attention=self.has_attention)
+
     ### Loss functions
     pos_weight = torch.ones([1]) * self.edge_weight
     self.label_loss_func = nn.CrossEntropyLoss(reduction='mean')
@@ -300,16 +308,16 @@ class GRANMixtureBernoulli(nn.Module):
     new_feature = torch.cat((pre_position, pre_feature), 0)
     new_node_feat = node_feat.clone()
     new_node_feat[0] = self.decoder_input_new(new_feature)
-    new_node_state = self.decoder(
+    new_node_state = self.decoder2(
         new_node_feat[node_idx_feat], edges, edge_feat=att_edge_feat)
     # AGG graph state, the last line is the new generated data
-    if self.agg_GNN_method == 'sum':
-      graph_state = new_node_state.sum(0)
-    elif self.agg_GNN_method == 'mean':
-      graph_state = new_node_state.mean(0)
-    else:
-      graph_state = new_node_state[-1]
-    
+    # if self.agg_GNN_method == 'sum':
+    #   graph_state = new_node_state.sum(0)
+    # elif self.agg_GNN_method == 'mean':
+    #   graph_state = new_node_state.mean(0)
+    # else:
+    #   graph_state = new_node_state[-1]
+    graph_state = new_node_state.sum(0)
     log_label = self.output_label(graph_state)
     ### Pairwise predict edges
     diff = new_node_state[node_idx_gnn[:, 0], :] - new_node_state[node_idx_gnn[:, 1], :]
@@ -425,7 +433,7 @@ class GRANMixtureBernoulli(nn.Module):
 
           # do GNN again
           node_state_in = self.decoder_input_new(features[:, :jj,:])
-          node_state_out = self.decoder(
+          node_state_out = self.decoder2(
               node_state_in.view(-1, H), edges, edge_feat=att_edge_feat)
           node_state_out = node_state_out.view(B, jj, -1)
           
@@ -439,13 +447,13 @@ class GRANMixtureBernoulli(nn.Module):
           log_alpha = self.output_alpha(diff)
 
            # AGG graph state
-          if self.agg_GNN_method == 'sum':
-            graph_state = node_state_out.sum(1)
-          elif self.agg_GNN_method == 'mean':
-            graph_state = node_state_out.mean(1)
-          else:
-            graph_state = node_state_out[:, -1]
-
+          # if self.agg_GNN_method == 'sum':
+          #   graph_state = node_state_out.sum(1)
+          # elif self.agg_GNN_method == 'mean':
+          #   graph_state = node_state_out.mean(1)
+          # else:
+          #   graph_state = node_state_out[:, -1]
+          graph_state = node_state_out.sum(1)
           log_label = self.output_label(graph_state)
           _, pre_label = torch.max(log_label, 1)
 
