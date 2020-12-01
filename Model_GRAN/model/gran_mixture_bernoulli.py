@@ -195,6 +195,8 @@ class GRANMixtureBernoulli(nn.Module):
           nn.Linear(self.max_num_nodes, self.embedding_dim))
       self.decoder_input_new = nn.Sequential(
           nn.Linear(3, self.embedding_dim))
+      self.decoder_input_new2 = nn.Sequential(
+          nn.Linear(4, self.embedding_dim))
     else:
       self.embedding_dim = self.max_num_nodes
 
@@ -256,8 +258,12 @@ class GRANMixtureBernoulli(nn.Module):
     K = self.block_size
     A_pad = A_pad.view(B * C * N_max, -1)
     node_features = node_features.view(B * C * N_max, -1)
+  #####
+    node_labels = node_labels.view(B * C * N_max, -1)
+    node_features = torch.cat((node_labels, node_features), 0)
+  #####
     if self.dimension_reduce:
-      node_feat = self.decoder_input_new(node_features)  # BCN_max X H
+      node_feat = self.decoder_input_new2(node_features)  # BCN_max X H
     else:
       node_feat = node_features  # BCN_max X N_max
 
@@ -308,7 +314,7 @@ class GRANMixtureBernoulli(nn.Module):
     new_feature = torch.cat((pre_position, pre_feature), 0)
     new_node_feat = node_feat.clone()
     new_node_feat[0] = self.decoder_input_new(new_feature)
-    new_node_state = self.decoder2(
+    new_node_state = self.decoder(
         new_node_feat[node_idx_feat], edges, edge_feat=att_edge_feat)
     # AGG graph state, the last line is the new generated data
     # if self.agg_GNN_method == 'sum':
@@ -433,7 +439,7 @@ class GRANMixtureBernoulli(nn.Module):
 
           # do GNN again
           node_state_in = self.decoder_input_new(features[:, :jj,:])
-          node_state_out = self.decoder2(
+          node_state_out = self.decoder(
               node_state_in.view(-1, H), edges, edge_feat=att_edge_feat)
           node_state_out = node_state_out.view(B, jj, -1)
           

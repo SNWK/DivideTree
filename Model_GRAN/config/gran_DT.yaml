@@ -14,8 +14,8 @@ dataset:
   node_order: BFS # k_core/BFS/degree_decent
   train_ratio: 0.9
   dev_ratio: 0.2
-  num_subgraph_batch: 30 # number of subgraphs per mini-batch, bigger than num_fwd_pass
-  num_fwd_pass: 30
+  num_subgraph_batch: 61 # number of subgraphs per mini-batch, bigger than num_fwd_pass
+  num_fwd_pass: 61
   has_node_feat: true
   is_save_split: false  
   is_sample_subgraph: true # set to true if you want to sample subgraphs
@@ -29,15 +29,15 @@ model:
   max_num_nodes: 65
   hidden_dim: 128
   embedding_dim: 128
-  num_GNN_layers: 7
-  num_GNN_prop: 1
+  num_GNN_layers: 3
+  num_GNN_prop: 5
   num_canonical_order: 1
   dimension_reduce: true
   has_attention: true
   edge_weight: 1.0e+0
   agg_GNN_method: 'sum' # mean, sum
-  relative_training: false
-  relative_num: 30
+  relative_training: False
+  relative_num: 5
 train:
   optimizer: Adam  
   lr_decay: 0.1

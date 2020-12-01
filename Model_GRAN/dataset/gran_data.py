@@ -175,14 +175,14 @@ class GRANData(object):
     return [adj_list, node_feature_list, node_label_list]
 
   def __getitem__(self, index):
-    K = self.block_size
-    N = self.max_num_nodes
-    S = self.stride
+    K = self.block_size #1
+    N = self.max_num_nodes #65
+    S = self.stride #1
 
     # load graph
     adj_list, node_feature_list, node_label_list = pickle.load(open(self.file_names[index], 'rb'))
-    num_nodes = adj_list[0].shape[0]
-    num_subgraphs = int(np.floor((num_nodes - K) / S) + 1)
+    num_nodes = adj_list[0].shape[0] #61
+    num_subgraphs = int(np.floor((num_nodes - K) / S) + 1) #61
 
     if self.is_sample_subgraph:
       if self.num_subgraph_batch < num_subgraphs:
@@ -202,6 +202,7 @@ class GRANData(object):
     start_time = time.time()
     data_batch = []
     for ff in range(self.num_fwd_pass):
+      # num_subgraphs_pass = 1
       ff_idx_start = num_subgraphs_pass * ff
       if ff == self.num_fwd_pass - 1:
         ff_idx_end = end_idx

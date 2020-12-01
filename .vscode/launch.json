@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "pythonPath": "/home/snwk/anaconda3/envs/dividetree/bin/python",
+            "python": "/home/snwk/anaconda3/envs/dividetree/bin/python",
             "cwd": "${fileDirname}"
         }
     ]
