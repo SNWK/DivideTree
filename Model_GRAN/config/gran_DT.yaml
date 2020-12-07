@@ -52,18 +52,18 @@ train:
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true
-  is_resume: false
-  resume_epoch: 5000
-  resume_dir: # exp/GRAN/your_exp_folder
-  resume_model: model_snapshot_0005000.pth
+  is_resume: true
+  resume_epoch: 90
+  resume_dir: exp/GRAN/GRANMixtureBernoulli_DT_2020-Dec-02-00-38-17_189093
+  resume_model: model_snapshot_0000090.pth
 test:  
   batch_size: 1
-  num_workers: 0
+  num_workers: 4
   num_test_gen: 9 # number of generated samples  
   is_vis: true
   is_single_plot: false # visualize `num_vis` samples in a single image
   is_test_ER: false # test Erdos-Renyi baseline
-  use_mask_prob: False
+  use_mask_prob: true
   num_vis: 20
   vis_num_row: 3 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
